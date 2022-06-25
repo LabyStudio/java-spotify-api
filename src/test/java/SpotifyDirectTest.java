@@ -1,3 +1,5 @@
+package de.labystudio.spotifyapi.example;
+
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyAPIFactory;
 
