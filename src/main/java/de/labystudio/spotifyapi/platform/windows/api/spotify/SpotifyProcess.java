@@ -10,7 +10,6 @@ import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
  */
 public class SpotifyProcess extends WinProcess {
 
-    private static final byte[] PREFIX_TRACK_ID = "spotify:track:".getBytes();
     private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
 
     private final long addressTrackId;
@@ -29,17 +28,17 @@ public class SpotifyProcess extends WinProcess {
     public SpotifyProcess() {
         super("Spotify.exe");
 
+        // Get the highest addresses of the modules
         long highestAddress = this.getMaxProcessAddress();
 
         // Find addresses of playback states (Located in the chrome_elf.dll module)
-        this.addressTrackId = this.findInMemory(
-                0,
-                highestAddress,
-                PREFIX_TRACK_ID,
-                address -> this.isTrackIdValid(this.readTrackId(address))
+        this.addressTrackId = this.findAddressUsingPath(
+                "This program cannot be run in DOS mode",
+                "This program cannot be run in DOS mode",
+                "chrome_elf.dll",
+                "spotify:track:"
         );
-        // Check if we have found the addresses
-        if (this.addressTrackId == -1) {
+        if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");
         }
 
@@ -51,7 +50,7 @@ public class SpotifyProcess extends WinProcess {
                 0,
                 highestAddress,
                 PREFIX_CONTEXT,
-                address -> {
+                (address, index) -> {
                     PlaybackAccessor accessor = new PlaybackAccessor(this, address);
                     return accessor.isValid() && accessor.isPlaying() == isPlaying; // Check if address is valid
                 }

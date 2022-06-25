@@ -148,14 +148,61 @@ public class WinProcess implements WinApi {
     public long findInMemory(long address, long size, byte[] searchBytes, SearchCondition condition) {
         long cursor = address;
         long maxAddress = size - address;
+        int index = 0;
         while (cursor < maxAddress) {
             long target = this.findInMemory(cursor, maxAddress, searchBytes);
-            if (condition.matches(target)) {
+            if (condition.matches(target, index)) {
                 return target;
             }
             cursor = target + 1;
+            index++;
         }
         return -1;
+    }
+
+    /**
+     * Find the address of a text inside the memory.
+     * If there are multiple matches of the text, the given index will be used to select the correct one.
+     *
+     * @param start The address to start searching from.
+     * @param text  The text to search for.
+     * @param index The amount of matches to skip
+     * @return The address of the text at the given index
+     */
+    public long findAddressOfText(long start, String text, int index) {
+        long maxAddress = this.getMaxProcessAddress();
+        return this.findInMemory(start, maxAddress, text.getBytes(), (address, matchIndex) -> matchIndex == index);
+    }
+
+    /**
+     * Find multiple strings inside the memory.
+     * It will start searching with the first string and continue with the next at the position where the previous was found.
+     *
+     * @param path The list of strings to search for.
+     * @return The addresses of the strings.
+     */
+    public long findAddressUsingPath(String... path) {
+        long cursor = -1;
+        for (String part : path) {
+            cursor = this.findAddressOfText(cursor + 1, part, 0);
+            if (cursor == -1) {
+                return -1;
+            }
+        }
+        return cursor;
+    }
+
+    /**
+     * Find the first address of the modules.
+     *
+     * @return The address of the first module.
+     */
+    public long getFirstModuleAddress() {
+        long minAddress = Long.MAX_VALUE;
+        for (Map.Entry<Long, Long> module : this.getModules(this.processId).entrySet()) {
+            minAddress = Math.min(minAddress, module.getKey() + module.getValue());
+        }
+        return minAddress;
     }
 
     /**
@@ -224,9 +271,10 @@ public class WinProcess implements WinApi {
          * Called for each matching address.
          *
          * @param address The address of the matching bytes.
+         * @param index   The index of the match.
          * @return True if the address matches the criteria.
          */
-        boolean matches(long address);
+        boolean matches(long address, int index);
     }
 
 }

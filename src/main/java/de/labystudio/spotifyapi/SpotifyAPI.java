@@ -86,8 +86,14 @@ public interface SpotifyAPI {
     void registerListener(SpotifyListener listener);
 
     /**
+     * Unregisters a listener.
+     *
+     * @param listener the listener to unregister
+     */
+    void unregisterListener(SpotifyListener listener);
+
+    /**
      * Disconnect from the Spotify application and stop all background tasks.
-     * It will also remove all listeners.
      */
     void stop();
 }

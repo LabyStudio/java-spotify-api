@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'de.labystudio'
-version '1.0.3'
+version '1.0.4'
 
 compileJava {
     sourceCompatibility = '1.8'
@@ -20,6 +20,19 @@ dependencies {
     implementation group: 'net.java.dev.jna', name: 'jna-platform', version: '4.5.0'
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir 'src/main/java'
+            srcDir 'src/test/java'
+        }
+
+        resources {
+            srcDir 'src/main/resources'
+            srcDir 'src/test/resources'
+        }
+    }
+}
 
 java {
     withSourcesJar()

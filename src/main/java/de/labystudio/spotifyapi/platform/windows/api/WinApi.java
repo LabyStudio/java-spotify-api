@@ -98,7 +98,7 @@ public interface WinApi {
         return Native.toString(Arrays.copyOf(buffer, length));
     }
 
-    default Map<Long, Long> getModules(int pid) {
+    default Map<Long, Long> getModules(long pid) {
         Map<Long, Long> map = new HashMap<>();
 
         WinNT.HANDLE snapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
@@ -117,7 +117,7 @@ public interface WinApi {
         return map;
     }
 
-    default long getModuleAddress(int pid, String moduleName) {
+    default long getModuleAddress(long pid, String moduleName) {
         WinNT.HANDLE snapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
                 Tlhelp32.TH32CS_SNAPMODULE,
                 new WinDef.DWORD(pid)

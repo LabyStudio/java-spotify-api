@@ -6,21 +6,10 @@ import de.labystudio.spotifyapi.model.Track;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class SpotifyTest {
+public class SpotifyListenerTest {
 
-    public static void main(String[] args) throws Exception {
-        SpotifyAPI api = SpotifyAPIFactory.createInitialized();
-
-        // It has no track until the song started playing once
-        if (api.hasTrack()) {
-            System.out.println(api.getTrack());
-        }
-
-        // It has no position until the song is paused, the position changed or the song changed
-        if (api.hasPosition()) {
-            System.out.println(api.getPosition());
-        }
-
+    public static void main(String[] args) {
+        SpotifyAPI api = SpotifyAPIFactory.create();
         api.registerListener(new SpotifyListener() {
             @Override
             public void onConnect() {
@@ -66,6 +55,9 @@ public class SpotifyTest {
                 // api.stop();
             }
         });
+
+        // Initialize the API
+        api.initialize();
     }
 
     private static String formatDuration(long ms) {

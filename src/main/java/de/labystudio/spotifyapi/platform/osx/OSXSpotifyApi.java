@@ -44,4 +44,10 @@ public class OSXSpotifyApi extends AbstractSpotifyAPI {
     public boolean isConnected() {
         return false; // TODO Implement OSX SpotifyAPI
     }
+
+    @Override
+    public void stop() {
+
+    }
+
 }

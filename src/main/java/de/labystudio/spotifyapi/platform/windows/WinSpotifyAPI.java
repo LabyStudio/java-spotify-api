@@ -160,8 +160,6 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
 
     @Override
     public void stop() {
-        super.stop();
-
         if (this.task != null) {
             this.task.cancel(true);
             this.task = null;

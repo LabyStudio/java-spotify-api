@@ -56,6 +56,6 @@ public class SpotifyTitle {
         }
 
         String[] split = title.split(DELIMITER);
-        return new SpotifyTitle(split[0], split[1]);
+        return new SpotifyTitle(split[1], split[0]);
     }
 }

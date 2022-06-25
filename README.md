@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.LabyStudio:java-spotify-api:1.0.3:all'
+    implementation 'com.github.LabyStudio:java-spotify-api:1.0.4:all'
 }
 ```
 
@@ -83,4 +83,7 @@ api.registerListener(new SpotifyListener() {
         // api.stop();
     }
 });
+
+// Initialize the API
+api.initialize();
 ```
