@@ -40,7 +40,7 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
      * @throws IllegalStateException if the API is already initialized
      */
     public SpotifyAPI initialize() {
-        if (this.task != null) {
+        if (this.isInitialized()) {
             throw new IllegalStateException("The SpotifyAPI is already initialized");
         }
 
@@ -156,6 +156,11 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     @Override
     public boolean isConnected() {
         return this.process != null && this.process.isOpen();
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return this.task != null;
     }
 
     @Override

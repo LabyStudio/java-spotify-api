@@ -1,6 +1,6 @@
 package de.labystudio.spotifyapi.platform.windows.api.playback;
 
-import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyProcess;
+import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 
 /**
  * Accessor to read the duration, position and playing state from the Spotify process.
@@ -12,7 +12,7 @@ public class PlaybackAccessor {
     private static final long MIN_TRACK_DURATION = 1000; // 1 second
     private static final long MAX_TRACK_DURATION = 1000 * 60 * 10; // 10 minutes
 
-    private final SpotifyProcess process;
+    private final WinProcess process;
     private final PointerRegistry pointerRegistry;
 
     private int length;
@@ -25,7 +25,7 @@ public class PlaybackAccessor {
      * @param process            The Spotify process to read from.
      * @param contextBaseAddress The base address of the context.
      */
-    public PlaybackAccessor(SpotifyProcess process, long contextBaseAddress) {
+    public PlaybackAccessor(WinProcess process, long contextBaseAddress) {
         this.process = process;
 
         // Create pointer registry to calculate the absolute addresses using the relative offsets

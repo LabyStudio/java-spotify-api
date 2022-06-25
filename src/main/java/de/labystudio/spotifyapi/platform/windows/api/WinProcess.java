@@ -17,9 +17,11 @@ import java.util.Map;
  */
 public class WinProcess implements WinApi {
 
-    private final int processId;
-    private final WinNT.HANDLE handle;
-    private final WinDef.HWND window;
+    protected final int processId;
+    protected final WinNT.HANDLE handle;
+    protected final WinDef.HWND window;
+
+    protected final long maxContentAddress;
 
     /**
      * Creates a new instance of the {@link WinProcess} class.
@@ -42,6 +44,8 @@ public class WinProcess implements WinApi {
         if (this.getWindowTitle().isEmpty()) {
             throw new IllegalStateException("Window for process " + this.processId + " not found");
         }
+
+        this.maxContentAddress = this.getModuleAddress("wow64cpu.dll");
     }
 
     /**
@@ -105,15 +109,15 @@ public class WinProcess implements WinApi {
      * <p>
      * It will return -1 if no address was found.
      *
-     * @param address     The address to start searching from.
-     * @param size        The maximum amount of bytes to search.
+     * @param minAddress  The minimum address to start searching from.
+     * @param maxAddress  The maximum address to stop searching at.
      * @param searchBytes The bytes to search for.
      * @return The address of the first matching bytes.
      */
-    public long findInMemory(long address, long size, byte[] searchBytes) {
+    public long findInMemory(long minAddress, long maxAddress, byte[] searchBytes) {
         int chunkSize = 1024 * 64;
 
-        for (long cursor = address; cursor < (address + size); cursor += chunkSize) {
+        for (long cursor = minAddress; cursor < maxAddress; cursor += chunkSize) {
             byte[] chunk = this.readBytes(cursor, chunkSize + searchBytes.length);
 
             for (int i = 0; i < chunk.length - searchBytes.length; i++) {
@@ -139,15 +143,14 @@ public class WinProcess implements WinApi {
      * <p>
      * It will return -1 if no address was found.
      *
-     * @param address     The address to start searching from.
-     * @param size        The maximum amount of bytes to search.
+     * @param minAddress  The address to start searching from.
+     * @param maxAddress  The address to stop searching at.
      * @param searchBytes The bytes to search for.
      * @param condition   The condition function to call for each matching address.
      * @return The address of the first matching bytes.
      */
-    public long findInMemory(long address, long size, byte[] searchBytes, SearchCondition condition) {
-        long cursor = address;
-        long maxAddress = size - address;
+    public long findInMemory(long minAddress, long maxAddress, byte[] searchBytes, SearchCondition condition) {
+        long cursor = minAddress;
         int index = 0;
         while (cursor < maxAddress) {
             long target = this.findInMemory(cursor, maxAddress, searchBytes);
@@ -161,6 +164,23 @@ public class WinProcess implements WinApi {
     }
 
     /**
+     * Check if the given bytes are at the given address.
+     *
+     * @param address The address to check.
+     * @param bytes   The bytes to check.
+     * @return True if the bytes are at the given address.
+     */
+    public boolean hasBytes(long address, int... bytes) {
+        byte[] chunk = this.readBytes(address, bytes.length);
+        for (int i = 0; i < chunk.length; i++) {
+            if (chunk[i] != (byte) bytes[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Find the address of a text inside the memory.
      * If there are multiple matches of the text, the given index will be used to select the correct one.
      *
@@ -170,8 +190,20 @@ public class WinProcess implements WinApi {
      * @return The address of the text at the given index
      */
     public long findAddressOfText(long start, String text, int index) {
-        long maxAddress = this.getMaxProcessAddress();
-        return this.findInMemory(start, maxAddress, text.getBytes(), (address, matchIndex) -> matchIndex == index);
+        return this.findAddressOfText(start, text, (address, matchIndex) -> matchIndex == index);
+    }
+
+    /**
+     * Find the address of a text inside the memory.
+     * If there are multiple matches of the text, the given index will be used to select the correct one.
+     *
+     * @param start     The address to start searching from.
+     * @param text      The text to search for.
+     * @param condition The condition function to call for each matching address.
+     * @return The address of the text at the given index
+     */
+    public long findAddressOfText(long start, String text, SearchCondition condition) {
+        return this.findInMemory(start, this.maxContentAddress, text.getBytes(), condition);
     }
 
     /**
@@ -190,6 +222,43 @@ public class WinProcess implements WinApi {
             }
         }
         return cursor;
+    }
+
+    /**
+     * Find an address by matching multiple rules inside the memory.
+     * It will start searching for the first rule and continues the next at the position where the previous match was found.
+     *
+     * @param rules The list of rules to search for.
+     * @return The final addresses after all rules were matched.
+     */
+    public long findAddressUsingRules(SearchRule... rules) {
+        long cursor = -1;
+        for (SearchRule rule : rules) {
+            cursor = this.findAddressOfText(cursor + 1, rule.getText(), rule.getCondition());
+            if (cursor == -1) {
+                return -1;
+            }
+        }
+        return cursor;
+    }
+
+    /**
+     * Find the base address of the given module name.
+     *
+     * @param moduleName The name of the module.
+     * @return The base address of the module.
+     */
+    public long getModuleAddress(String moduleName) {
+        return this.getModuleAddress(this.processId, moduleName);
+    }
+
+    /**
+     * Collect all module addresses and their size of the given process.
+     *
+     * @return A list of module addresses and their size.
+     */
+    public Map<Long, Long> getModules() {
+        return this.getModules(this.processId);
     }
 
     /**
@@ -263,6 +332,15 @@ public class WinProcess implements WinApi {
     }
 
     /**
+     * Get the highest memory address with relevant content.
+     *
+     * @return The highest memory address with relevant content.
+     */
+    public long getMaxContentAddress() {
+        return this.maxContentAddress;
+    }
+
+    /**
      * Search condition function to check if the address matches additional criteria.
      */
     public interface SearchCondition {
@@ -275,6 +353,25 @@ public class WinProcess implements WinApi {
          * @return True if the address matches the criteria.
          */
         boolean matches(long address, int index);
+    }
+
+    public static class SearchRule {
+
+        private final String text;
+        private final SearchCondition condition;
+
+        public SearchRule(String text, SearchCondition condition) {
+            this.text = text;
+            this.condition = condition;
+        }
+
+        public String getText() {
+            return this.text;
+        }
+
+        public SearchCondition getCondition() {
+            return this.condition;
+        }
     }
 
 }

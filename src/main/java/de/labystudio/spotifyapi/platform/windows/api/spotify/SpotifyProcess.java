@@ -10,6 +10,7 @@ import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
  */
 public class SpotifyProcess extends WinProcess {
 
+    private static final boolean DEBUG = false;
     private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
 
     private final long addressTrackId;
@@ -28,27 +29,32 @@ public class SpotifyProcess extends WinProcess {
     public SpotifyProcess() {
         super("Spotify.exe");
 
-        // Get the highest addresses of the modules
-        long highestAddress = this.getMaxProcessAddress();
+        if (DEBUG) {
+            System.out.println("Spotify process loaded! Searching for addresses...");
+        }
+
+        long timeScanStart = System.currentTimeMillis();
 
         // Find addresses of playback states (Located in the chrome_elf.dll module)
-        this.addressTrackId = this.findAddressUsingPath(
-                "This program cannot be run in DOS mode",
-                "This program cannot be run in DOS mode",
-                "chrome_elf.dll",
-                "spotify:track:"
+        this.addressTrackId = this.findAddressOfText(
+                this.maxContentAddress / 2,
+                "spotify:track:",
+                (address, index) -> this.hasBytes(address + 1028, 0xDC, 0xA1)
         );
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");
+        }
+        if (DEBUG) {
+            System.out.println("Found track id address: " + Long.toHexString(this.addressTrackId));
         }
 
         // Check if the song is currently playing using the title bar
         boolean isPlaying = this.isPlayingUsingTitle();
 
-        // Find addresses of track id
+        // Find addresses of track id;
         this.addressPlayBack = this.findInMemory(
                 0,
-                highestAddress,
+                this.addressTrackId,
                 PREFIX_CONTEXT,
                 (address, index) -> {
                     PlaybackAccessor accessor = new PlaybackAccessor(this, address);
@@ -57,6 +63,10 @@ public class SpotifyProcess extends WinProcess {
         );
         if (this.addressPlayBack == -1) {
             throw new IllegalStateException("Could not find playback in memory");
+        }
+        if (DEBUG) {
+            System.out.println("Found playback address at: " + Long.toHexString(this.addressPlayBack));
+            System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
         }
 
         // Create the playback accessor with the found address

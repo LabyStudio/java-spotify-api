@@ -21,6 +21,11 @@ public class OSXSpotifyApi extends AbstractSpotifyAPI {
     }
 
     @Override
+    public boolean isInitialized() {
+        return false;
+    }
+
+    @Override
     public Track getTrack() {
         return null; // TODO Implement OSX SpotifyAPI
     }

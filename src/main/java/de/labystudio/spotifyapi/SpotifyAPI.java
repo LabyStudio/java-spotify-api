@@ -78,6 +78,14 @@ public interface SpotifyAPI {
      */
     boolean isConnected();
 
+
+    /**
+     * Returns true if the background process is running.
+     *
+     * @return true if the background process is running
+     */
+    boolean isInitialized();
+
     /**
      * Registers a listener to be notified about changes.
      *
