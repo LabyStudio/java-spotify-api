@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
+}
+
+group 'de.labystudio'
+version '1.0.0'
+
+compileJava {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'net.java.dev.jna', name: 'jna', version: '4.5.0'
+    implementation group: 'net.java.dev.jna', name: 'jna-platform', version: '4.5.0'
+}
+
+build {
+    dependsOn shadowJar
+}
