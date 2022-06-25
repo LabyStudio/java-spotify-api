@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 public class SpotifyTest {
 
     public static void main(String[] args) throws Exception {
-        SpotifyAPI api = SpotifyAPIFactory.create();
+        SpotifyAPI api = SpotifyAPIFactory.createInitialized();
 
         // It has no track until the song started playing once
         if (api.hasTrack()) {

@@ -72,7 +72,7 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
             String trackId = this.process.getTrackId();
 
             // Update playback status and check if it is valid
-            if (!playback.update() || !this.isTrackIdValid(trackId)) {
+            if (!playback.update() || !this.process.isTrackIdValid(trackId)) {
                 throw new IllegalStateException("Could not update playback");
             }
 
@@ -171,22 +171,6 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
             this.process.close();
             this.process = null;
         }
-    }
-
-    /**
-     * Checks if the given track ID is valid.
-     * A track ID is valid if there are no characters with a value of zero.
-     *
-     * @param trackId The track ID to check.
-     * @return True if the track ID is valid, false otherwise.
-     */
-    private boolean isTrackIdValid(String trackId) {
-        for (char c : trackId.toCharArray()) {
-            if (c == 0) {
-                return false;
-            }
-        }
-        return true;
     }
 
 }

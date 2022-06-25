@@ -11,7 +11,9 @@ import com.sun.jna.ptr.IntByReference;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -94,6 +96,25 @@ public interface WinApi {
         char[] buffer = new char[512];
         int length = User32.INSTANCE.GetWindowText(window, buffer, buffer.length);
         return Native.toString(Arrays.copyOf(buffer, length));
+    }
+
+    default Map<Long, Long> getModules(int pid) {
+        Map<Long, Long> map = new HashMap<>();
+
+        WinNT.HANDLE snapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
+                Tlhelp32.TH32CS_SNAPMODULE,
+                new WinDef.DWORD(pid)
+        );
+        if (snapshot == null) {
+            return map;
+        }
+
+        Tlhelp32.MODULEENTRY32W moduleEntry = new Tlhelp32.MODULEENTRY32W.ByReference();
+        while (Kernel32.INSTANCE.Module32NextW(snapshot, moduleEntry)) {
+            map.put(Pointer.nativeValue(moduleEntry.modBaseAddr), moduleEntry.modBaseSize.longValue());
+        }
+        Kernel32.INSTANCE.CloseHandle(snapshot);
+        return map;
     }
 
     default long getModuleAddress(int pid, String moduleName) {

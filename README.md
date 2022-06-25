@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.LabyStudio:java-spotify-api:1.0.2:all'
+    implementation 'com.github.LabyStudio:java-spotify-api:1.0.3:all'
 }
 ```
 
@@ -22,7 +22,7 @@ dependencies {
 Create the API and get the current playing song and position:
 ```java
 // Create a new SpotifyAPI for your operating system
-SpotifyAPI api = SpotifyAPIFactory.create();
+SpotifyAPI api = SpotifyAPIFactory.createInitialized();
 
 // It has no track until the song started playing once
 if (api.hasTrack()) {

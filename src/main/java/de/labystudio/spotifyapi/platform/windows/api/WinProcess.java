@@ -7,6 +7,8 @@ import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.ptr.IntByReference;
 
+import java.util.Map;
+
 /**
  * Windows Process API
  * Used to connect to a Windows process and read its memory.
@@ -154,6 +156,20 @@ public class WinProcess implements WinApi {
             cursor = target + 1;
         }
         return -1;
+    }
+
+    /**
+     * Find the highest process address.
+     * The highest process address is determined by the highest module address + module size.
+     *
+     * @return The highest process address.
+     */
+    public long getMaxProcessAddress() {
+        long maxAddress = 0;
+        for (Map.Entry<Long, Long> module : this.getModules(this.processId).entrySet()) {
+            maxAddress = Math.max(maxAddress, module.getKey() + module.getValue());
+        }
+        return maxAddress;
     }
 
     /**
