@@ -60,12 +60,12 @@ public class PlaybackAccessor {
      * To make sure that we have correct values from the memory address,
      * we have to set some rules what kind of duration is correct.
      * <p>
-     * The values are correct if:
-     * - position <= length
-     * - length > 0
-     * - length <= 10 minutes
-     * - position >= 1 second
-     * - the parity bits are correct
+     * The values are correct if:<br>
+     * - position {@literal <}= length<br>
+     * - length {@literal >} 0<br>
+     * - length {@literal <}= 10 minutes<br>
+     * - position {@literal >}= 1 second<br>
+     * - the parity bits are correct<br>
      *
      * @return true if the current values are valid, false otherwise
      */
