@@ -2,6 +2,8 @@ package de.labystudio.spotifyapi;
 
 import de.labystudio.spotifyapi.model.Track;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * This is the main interface for the SpotifyAPI.
  * It is used to get the current track and the current position of a song.
@@ -13,10 +15,20 @@ public interface SpotifyAPI {
 
     /**
      * Initialize the SpotifyAPI and connect to the Spotify process.
+     * Initializing the api will block the current thread until the connection is established.
      *
      * @return the initialized SpotifyAPI
      */
     SpotifyAPI initialize();
+
+    /**
+     * Initialize the SpotifyAPI and connect to the Spotify process asynchronously.
+     *
+     * @return a future that will contain the initialized SpotifyAPI
+     */
+    default CompletableFuture<SpotifyAPI> initializeAsync() {
+        return CompletableFuture.supplyAsync(this::initialize);
+    }
 
     /**
      * Returns the current track that is playing right now

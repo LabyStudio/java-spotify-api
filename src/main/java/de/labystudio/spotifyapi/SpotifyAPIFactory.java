@@ -26,13 +26,23 @@ public class SpotifyAPIFactory {
         String os = System.getProperty("os.name").toLowerCase(Locale.ENGLISH);
 
         if (os.contains("win")) {
-            return new WinSpotifyAPI().initialize();
+            return new WinSpotifyAPI();
         }
         if (os.contains("mac")) {
-            return new OSXSpotifyApi().initialize();
+            return new OSXSpotifyApi();
         }
 
         throw new IllegalStateException("Unsupported OS: " + os);
+    }
+
+    /**
+     * Create an initialized SpotifyAPI instance.
+     * Initializing will block the current thread until the SpotifyAPI instance is ready.
+     *
+     * @return A new SpotifyAPI instance.
+     */
+    public static SpotifyAPI createInitialized() {
+        return create().initialize();
     }
 
     /**
@@ -41,8 +51,8 @@ public class SpotifyAPIFactory {
      *
      * @return A future that will contain the SpotifyAPI instance.
      */
-    public static CompletableFuture<SpotifyAPI> createAsync() {
-        return CompletableFuture.supplyAsync(SpotifyAPIFactory::create);
+    public static CompletableFuture<SpotifyAPI> createInitializedAsync() {
+        return CompletableFuture.supplyAsync(SpotifyAPIFactory::createInitialized);
     }
 
 }
