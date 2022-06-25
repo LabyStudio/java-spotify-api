@@ -87,3 +87,12 @@ api.registerListener(new SpotifyListener() {
 // Initialize the API
 api.initialize();
 ```
+
+Fetch an image of the current playing track:
+```java
+// Create an instance of the Open Spotify API
+OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI();
+
+// Download the cover art of the current song
+BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);
+```
