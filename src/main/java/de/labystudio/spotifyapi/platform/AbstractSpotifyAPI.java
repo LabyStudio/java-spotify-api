@@ -23,4 +23,8 @@ public abstract class AbstractSpotifyAPI implements SpotifyAPI {
         this.listeners.add(listener);
     }
 
+    @Override
+    public void stop() {
+        this.listeners.clear();
+    }
 }

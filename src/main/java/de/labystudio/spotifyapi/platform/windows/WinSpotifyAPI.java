@@ -10,6 +10,7 @@ import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyProcess;
 
 import java.util.Objects;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * Windows implementation of the SpotifyAPI.
@@ -29,18 +30,25 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     private long lastTimePositionUpdated;
     private boolean positionKnown = false;
 
+    private ScheduledFuture<?> task;
+
     /**
      * Initialize the SpotifyAPI Windows implementation.
      * It will create a task that will update the current track and position every second.
      *
      * @return the initialized SpotifyAPI
+     * @throws IllegalStateException if the API is already initialized
      */
     public SpotifyAPI initialize() {
+        if (this.task != null) {
+            throw new IllegalStateException("The SpotifyAPI is already initialized");
+        }
+
         // Initial tick
         this.onTick();
 
         // Start task to update every second
-        Executors.newScheduledThreadPool(1).scheduleWithFixedDelay(
+        this.task = Executors.newScheduledThreadPool(1).scheduleWithFixedDelay(
                 this::onTick, 1, 1, java.util.concurrent.TimeUnit.SECONDS
         );
 
@@ -148,6 +156,21 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     @Override
     public boolean isConnected() {
         return this.process != null && this.process.isOpen();
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+
+        if (this.task != null) {
+            this.task.cancel(true);
+            this.task = null;
+        }
+
+        if (this.process != null) {
+            this.process.close();
+            this.process = null;
+        }
     }
 
     /**

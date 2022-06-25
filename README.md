@@ -37,42 +37,50 @@ if (api.hasPosition()) {
 
 Register a listener to get notified when the song changes:
 ```java
+SpotifyAPI api = SpotifyAPIFactory.create();
 api.registerListener(new SpotifyListener() {
     @Override
     public void onConnect() {
         System.out.println("Connected to Spotify!");
     }
-
+    
     @Override
     public void onTrackChanged(Track track) {
-        System.out.println("Track changed: [" + track.getId() + "] " + track.getName() + " - " + track.getArtist() + " (" + formatDuration(track.getLength()) + ")");
+        System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
     }
-
+    
     @Override
     public void onPositionChanged(int position) {
-        if (api.getTrack() == null) {
+        if (!api.hasTrack()) {
             return;
         }
-
+        
         int length = api.getTrack().getLength();
         float percentage = 100.0F / length * position;
-
-        System.out.println("Seek: " + (int) percentage + "% (" + formatDuration(position) + " / " + formatDuration(length) + ")");
+        
+        System.out.printf(
+            "Position changed: %s of %s (%d%%)\n",
+            formatDuration(position),
+            formatDuration(length),
+            (int) percentage
+        );
     }
-
+    
     @Override
     public void onPlayBackChanged(boolean isPlaying) {
-        System.out.println(isPlaying ? "Playing" : "Paused");
+        System.out.println(isPlaying ? "Song started playing" : "Song stopped playing");
     }
-
+    
     @Override
     public void onSync() {
-
+        
     }
-
+    
     @Override
     public void onDisconnect(Exception exception) {
         System.out.println("Disconnected: " + exception.getMessage());
+        
+        // api.stop();
     }
 });
 ```
