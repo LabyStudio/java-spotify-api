@@ -1,6 +1,7 @@
 package de.labystudio.spotifyapi.platform.osx;
 
 import de.labystudio.spotifyapi.SpotifyAPI;
+import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.platform.AbstractSpotifyAPI;
 
@@ -38,6 +39,11 @@ public class OSXSpotifyApi extends AbstractSpotifyAPI {
     @Override
     public boolean hasPosition() {
         return false; // TODO Implement OSX SpotifyAPI
+    }
+
+    @Override
+    public void pressMediaKey(MediaKey mediaKey) {
+
     }
 
     @Override

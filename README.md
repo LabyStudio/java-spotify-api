@@ -7,6 +7,14 @@ because the API reads the information directly from the application itself.
 #### Supported operating systems:
 - Windows
 
+## Feature Overview
+- Track id
+- Track title & artist
+- Track progress & length
+- Playing state (Playing, paused)
+- Track cover
+- Media keys (Previous song, play/pause & next song)
+
 ## Gradle Setup
 ```groovy
 repositories {
@@ -95,4 +103,12 @@ OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI();
 
 // Download the cover art of the current song
 BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);
+```
+
+You can also skip the current song using the Media Key API:
+```java
+SpotifyAPI api = SpotifyAPIFactory.createInitialized();
+
+// Send media key to the operating system
+api.pressMediaKey(MediaKey.NEXT);
 ```

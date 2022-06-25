@@ -1,6 +1,8 @@
 package de.labystudio.spotifyapi.platform.windows;
 
 import de.labystudio.spotifyapi.SpotifyAPI;
+import de.labystudio.spotifyapi.model.MediaKey;
+import de.labystudio.spotifyapi.platform.windows.api.WinApi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
 import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyTitle;
 import de.labystudio.spotifyapi.SpotifyListener;
@@ -146,6 +148,21 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     @Override
     public boolean hasPosition() {
         return this.positionKnown;
+    }
+
+    @Override
+    public void pressMediaKey(MediaKey mediaKey) {
+        switch (mediaKey) {
+            case NEXT:
+                this.process.pressKey(WinApi.VK_MEDIA_NEXT_TRACK);
+                break;
+            case PREV:
+                this.process.pressKey(WinApi.VK_MEDIA_PREV_TRACK);
+                break;
+            case PLAY_PAUSE:
+                this.process.pressKey(WinApi.VK_MEDIA_PLAY_PAUSE);
+                break;
+        }
     }
 
     @Override

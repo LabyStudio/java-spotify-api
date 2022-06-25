@@ -2,11 +2,13 @@ package de.labystudio.spotifyapi.platform.windows.api;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.BaseTSD;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.Tlhelp32;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
+import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.ptr.IntByReference;
 
 import java.util.ArrayList;
@@ -26,6 +28,14 @@ public interface WinApi {
     int PROCESS_VM_READ = 0x0010;
     int PROCESS_VM_WRITE = 0x0020;
     int PROCESS_VM_OPERATION = 0x0008;
+
+    int VK_VOLUME_MUTE = 0xAD;
+    int VK_VOLUME_DOWN = 0xAE;
+    int VK_VOLUME_UP = 0xAF;
+    int VK_MEDIA_NEXT_TRACK = 0xB0;
+    int VK_MEDIA_PREV_TRACK = 0xB1;
+    int VK_MEDIA_STOP = 0xB2;
+    int VK_MEDIA_PLAY_PAUSE = 0xB3;
 
     default int getProcessIdByName(String exeName) {
         Kernel32 kernel = Kernel32.INSTANCE;
@@ -136,5 +146,25 @@ public interface WinApi {
         }
         Kernel32.INSTANCE.CloseHandle(snapshot);
         return -1;
+    }
+
+    default void pressKey(int keyCode) {
+        WinUser.INPUT input = new WinUser.INPUT();
+
+        input.type = new WinDef.DWORD(WinUser.INPUT.INPUT_KEYBOARD);
+        input.input.setType("ki");
+        input.input.ki.wVk = new WinDef.WORD(keyCode); // Key code
+        input.input.ki.wScan = new WinDef.WORD(0); // Hardware scan code
+        input.input.ki.time = new WinDef.DWORD(0); // Timestamp (System default)
+        input.input.ki.dwExtraInfo = new BaseTSD.ULONG_PTR(0);
+
+        // Press the key
+        input.input.ki.dwFlags = new WinDef.DWORD(0);  // Key down
+        User32.INSTANCE.SendInput(new WinDef.DWORD(1), new WinUser.INPUT[]{input}, input.size());
+
+        // Release the key
+        input.input.ki.dwFlags = new WinDef.DWORD(2);  // Key up
+        User32.INSTANCE.SendInput(new WinDef.DWORD(1), new WinUser.INPUT[]{input}, input.size());
+
     }
 }

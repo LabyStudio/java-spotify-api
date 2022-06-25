@@ -1,5 +1,6 @@
 package de.labystudio.spotifyapi;
 
+import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 
 import java.util.concurrent.CompletableFuture;
@@ -70,6 +71,19 @@ public interface SpotifyAPI {
      * @return true if the current track is playing
      */
     boolean isPlaying();
+
+    /**
+     * Send a key pres of a media key to the system.<br>
+     * The key can be one of the following:
+     * <ul>
+     *     <li>{@link MediaKey#PLAY_PAUSE}</li>
+     *     <li>{@link MediaKey#NEXT}</li>
+     *     <li>{@link MediaKey#PREV}</li>
+     * </ul>
+     *
+     * @param mediaKey the key to send
+     */
+    void pressMediaKey(MediaKey mediaKey);
 
     /**
      * Returns true if the api is connected to the Spotify application.
