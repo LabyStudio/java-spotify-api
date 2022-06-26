@@ -4,9 +4,6 @@
 There is no need for an access token, any internet connection or a premium account
 because the API reads the information directly from the application itself.
 
-#### Supported operating systems:
-- Windows
-
 ## Feature Overview
 - Track id
 - Track title & artist
@@ -14,6 +11,9 @@ because the API reads the information directly from the application itself.
 - Playing state (Playing, paused)
 - Track cover
 - Media keys (Previous song, play/pause & next song)
+
+#### Supported operating systems:
+- Windows
 
 ## Gradle Setup
 ```groovy
