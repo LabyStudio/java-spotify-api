@@ -163,6 +163,9 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
                 this.process.pressKey(WinApi.VK_MEDIA_PLAY_PAUSE);
                 break;
         }
+
+        // Update state immediately
+        this.onTick();
     }
 
     @Override
