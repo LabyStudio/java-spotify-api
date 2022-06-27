@@ -31,6 +31,7 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
 
     private long lastTimePositionUpdated;
     private boolean positionKnown = false;
+    private long lastAccessorPosition = -1;
 
     private ScheduledFuture<?> task;
 
@@ -83,12 +84,18 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
                 SpotifyTitle title = this.process.getTitle();
                 if (title != SpotifyTitle.UNKNOWN) {
                     int trackLength = playback.getLength();
+                    boolean isFirstTrack = !this.hasTrack();
 
                     Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
                     this.currentTrack = track;
 
                     // Fire on track changed
                     this.listeners.forEach(listener -> listener.onTrackChanged(track));
+
+                    // Reset position on song change
+                    if (!isFirstTrack) {
+                        this.updatePosition(0);
+                    }
                 }
             }
 
@@ -103,17 +110,9 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
 
             // Handle position changes
             int position = playback.getPosition();
-            if (position != this.currentPosition) {
-                // Update position known state
-                this.positionKnown = this.currentPosition != -1 || !isPlaying;
-                this.currentPosition = position;
-
-                if (this.positionKnown) {
-                    this.lastTimePositionUpdated = System.currentTimeMillis();
-
-                    // Fire on position changed
-                    this.listeners.forEach(listener -> listener.onPositionChanged(position));
-                }
+            if (position != this.lastAccessorPosition) {
+                this.lastAccessorPosition = position;
+                this.updatePosition(position);
             }
 
             // Fire keep alive
@@ -122,6 +121,23 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
             // Fire on disconnect
             this.listeners.forEach(listener -> listener.onDisconnect(exception));
             this.process = null;
+        }
+    }
+
+    private void updatePosition(int position) {
+        if (position == this.currentPosition) {
+            return;
+        }
+
+        // Update position known state
+        this.positionKnown = this.currentPosition != -1 || !this.isPlaying;
+        this.currentPosition = position;
+
+        if (this.positionKnown) {
+            this.lastTimePositionUpdated = System.currentTimeMillis();
+
+            // Fire on position changed
+            this.listeners.forEach(listener -> listener.onPositionChanged(position));
         }
     }
 
