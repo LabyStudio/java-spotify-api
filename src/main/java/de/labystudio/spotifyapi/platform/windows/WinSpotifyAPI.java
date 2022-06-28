@@ -1,18 +1,15 @@
 package de.labystudio.spotifyapi.platform.windows;
 
-import de.labystudio.spotifyapi.SpotifyAPI;
+import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.MediaKey;
+import de.labystudio.spotifyapi.model.Track;
+import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import de.labystudio.spotifyapi.platform.windows.api.WinApi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
-import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyTitle;
-import de.labystudio.spotifyapi.SpotifyListener;
-import de.labystudio.spotifyapi.model.Track;
-import de.labystudio.spotifyapi.platform.AbstractSpotifyAPI;
 import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyProcess;
+import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyTitle;
 
 import java.util.Objects;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledFuture;
 
 /**
  * Windows implementation of the SpotifyAPI.
@@ -21,7 +18,7 @@ import java.util.concurrent.ScheduledFuture;
  *
  * @author LabyStudio
  */
-public class WinSpotifyAPI extends AbstractSpotifyAPI {
+public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     private SpotifyProcess process;
 
@@ -33,36 +30,11 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     private boolean positionKnown = false;
     private long lastAccessorPosition = -1;
 
-    private ScheduledFuture<?> task;
-
-    /**
-     * Initialize the SpotifyAPI Windows implementation.
-     * It will create a task that will update the current track and position every second.
-     *
-     * @return the initialized SpotifyAPI
-     * @throws IllegalStateException if the API is already initialized
-     */
-    public SpotifyAPI initialize() {
-        if (this.isInitialized()) {
-            throw new IllegalStateException("The SpotifyAPI is already initialized");
-        }
-
-        // Initial tick
-        this.onTick();
-
-        // Start task to update every second
-        this.task = Executors.newScheduledThreadPool(1).scheduleWithFixedDelay(
-                this::onTick, 1, 1, java.util.concurrent.TimeUnit.SECONDS
-        );
-
-        return this;
-    }
-
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
      */
-    private void onTick() {
+    protected void onTick() {
         try {
             if (!this.isConnected()) {
                 this.process = new SpotifyProcess();
@@ -195,16 +167,8 @@ public class WinSpotifyAPI extends AbstractSpotifyAPI {
     }
 
     @Override
-    public boolean isInitialized() {
-        return this.task != null;
-    }
-
-    @Override
     public void stop() {
-        if (this.task != null) {
-            this.task.cancel(true);
-            this.task = null;
-        }
+        super.stop();
 
         if (this.process != null) {
             this.process.close();

@@ -35,7 +35,7 @@ public class SpotifyProcess extends WinProcess {
 
         long timeScanStart = System.currentTimeMillis();
 
-        // Find addresses of playback states (Located in the chrome_elf.dll module)
+        // Find address of track id (Located in the chrome_elf.dll module)
         this.addressTrackId = this.findAddressOfText(
                 this.maxContentAddress / 2,
                 "spotify:track:",
@@ -51,7 +51,7 @@ public class SpotifyProcess extends WinProcess {
         // Check if the song is currently playing using the title bar
         boolean isPlaying = this.isPlayingUsingTitle();
 
-        // Find addresses of track id;
+        // Find addresses of playback states
         this.addressPlayBack = this.findInMemory(
                 0,
                 this.addressTrackId,

@@ -14,6 +14,7 @@ because the API reads the information directly from the application itself.
 
 #### Supported operating systems:
 - Windows
+- macOS
 
 ## Gradle Setup
 ```groovy
@@ -22,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.LabyStudio:java-spotify-api:1.0.9:all'
+    implementation 'com.github.LabyStudio:java-spotify-api:1.1.0:all'
 }
 ```
 
