@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.LabyStudio:java-spotify-api:1.1.0:all'
+    implementation 'com.github.LabyStudio:java-spotify-api:1.1.1:all'
 }
 ```
 

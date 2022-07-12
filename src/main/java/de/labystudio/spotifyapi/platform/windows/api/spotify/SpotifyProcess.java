@@ -39,7 +39,10 @@ public class SpotifyProcess extends WinProcess {
         this.addressTrackId = this.findAddressOfText(
                 this.maxContentAddress / 2,
                 "spotify:track:",
-                (address, index) -> this.hasBytes(address + 1028, 0xDC, 0xA1)
+                (address, index) -> this.hasBytes(
+                        address + 37,
+                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                )
         );
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");

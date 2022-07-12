@@ -48,6 +48,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
             // Update playback status and check if it is valid
             if (!playback.update() || !this.process.isTrackIdValid(trackId)) {
+                this.positionKnown = false;
+                this.currentPosition = -1;
                 throw new IllegalStateException("Could not update playback");
             }
 
