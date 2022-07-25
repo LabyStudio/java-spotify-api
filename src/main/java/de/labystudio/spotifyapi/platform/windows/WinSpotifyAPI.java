@@ -103,14 +103,17 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             return;
         }
 
-        // Update position known state
+        // The position is known if the song is currently paused
+        // or if the position has changed during the runtime of the program.
+        // Because the position is updated when the track initializes, it could be that the position is not known yet.
         this.positionKnown = this.currentPosition != -1 || !this.isPlaying;
+
+        // Update position
         this.currentPosition = position;
+        this.lastTimePositionUpdated = System.currentTimeMillis();
 
+        // Fire on position changed if the position is known
         if (this.positionKnown) {
-            this.lastTimePositionUpdated = System.currentTimeMillis();
-
-            // Fire on position changed
             this.listeners.forEach(listener -> listener.onPositionChanged(position));
         }
     }

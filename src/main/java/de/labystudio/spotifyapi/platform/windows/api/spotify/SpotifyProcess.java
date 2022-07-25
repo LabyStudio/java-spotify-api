@@ -10,7 +10,15 @@ import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
  */
 public class SpotifyProcess extends WinProcess {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = System.getProperty("SPOTIFY_API_DEBUG") != null;
+
+    // Spotify track id
+    private static final String CHROME_ELF_DLL = "chrome_elf.dll";
+    private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
+    private static final long OFFSET_CHROME_ELF_2 = 4871;
+    private static final long OFFSET_TRACK_ID = 105700;
+
+    // Spotify playback
     private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
 
     private final long addressTrackId;
@@ -36,14 +44,11 @@ public class SpotifyProcess extends WinProcess {
         long timeScanStart = System.currentTimeMillis();
 
         // Find address of track id (Located in the chrome_elf.dll module)
-        this.addressTrackId = this.findAddressOfText(
-                this.maxContentAddress / 2,
-                "spotify:track:",
-                (address, index) -> this.hasBytes(
-                        address + 37,
-                        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-                )
-        );
+        this.addressTrackId = this.findAddressUsingRules(new SearchRule(CHROME_ELF_DLL, (address, index)
+                -> this.hasText(address + OFFSET_CHROME_ELF_2, CHROME_ELF_DLL)
+                && this.hasText(address + OFFSET_TRACK_ID, PREFIX_SPOTIFY_TRACK)
+        )) + OFFSET_TRACK_ID;
+
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");
         }
@@ -67,13 +72,17 @@ public class SpotifyProcess extends WinProcess {
         if (this.addressPlayBack == -1) {
             throw new IllegalStateException("Could not find playback in memory");
         }
+
+        // Create the playback accessor with the found address
+        this.playbackAccessor = new PlaybackAccessor(this, this.addressPlayBack);
+        if (!this.playbackAccessor.isValid()) {
+            throw new IllegalStateException("Could not create playback accessor");
+        }
+
         if (DEBUG) {
             System.out.println("Found playback address at: " + Long.toHexString(this.addressPlayBack));
             System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
         }
-
-        // Create the playback accessor with the found address
-        this.playbackAccessor = new PlaybackAccessor(this, this.addressPlayBack);
     }
 
     /**

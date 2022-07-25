@@ -154,7 +154,7 @@ public class WinProcess implements WinApi {
         int index = 0;
         while (cursor < maxAddress) {
             long target = this.findInMemory(cursor, maxAddress, searchBytes);
-            if (condition.matches(target, index)) {
+            if (target == -1 || condition.matches(target, index)) {
                 return target;
             }
             cursor = target + 1;
@@ -178,6 +178,34 @@ public class WinProcess implements WinApi {
             }
         }
         return true;
+    }
+
+    /**
+     * Check if the given bytes are at the given address.
+     *
+     * @param address The address to check.
+     * @param bytes   The bytes to check.
+     * @return True if the bytes are at the given address.
+     */
+    public boolean hasBytes(long address, byte[] bytes) {
+        byte[] chunk = this.readBytes(address, bytes.length);
+        for (int i = 0; i < chunk.length; i++) {
+            if (chunk[i] != bytes[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Check if the given text is at the given address.
+     *
+     * @param address The address to check.
+     * @param text    The text to check.
+     * @return True if the text is at the given address.
+     */
+    public boolean hasText(long address, String text) {
+        return this.hasBytes(address, text.getBytes());
     }
 
     /**
