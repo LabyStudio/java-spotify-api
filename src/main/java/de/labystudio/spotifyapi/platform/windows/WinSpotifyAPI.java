@@ -68,7 +68,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
                     // Reset position on song change
                     if (!isFirstTrack) {
-                        this.updatePosition(0);
+                        this.updatePosition(0, true);
                     }
                 }
             }
@@ -86,7 +86,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             int position = playback.getPosition();
             if (position != this.lastAccessorPosition) {
                 this.lastAccessorPosition = position;
-                this.updatePosition(position);
+                this.updatePosition(position, false);
             }
 
             // Fire keep alive
@@ -98,15 +98,15 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
     }
 
-    private void updatePosition(int position) {
-        if (position == this.currentPosition) {
+    private void updatePosition(int position, boolean force) {
+        if (position == this.currentPosition && !force) {
             return;
         }
 
         // The position is known if the song is currently paused
         // or if the position has changed during the runtime of the program.
-        // Because the position is updated when the track initializes, it could be that the position is not known yet.
-        this.positionKnown = this.currentPosition != -1 || !this.isPlaying;
+        // (The position update is also called when the memory content is empty)
+        this.positionKnown = force || this.currentPosition != -1 || !this.isPlaying;
 
         // Update position
         this.currentPosition = position;
