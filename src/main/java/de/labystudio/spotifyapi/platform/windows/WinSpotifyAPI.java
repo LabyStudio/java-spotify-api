@@ -29,6 +29,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private long lastTimePositionUpdated;
     private boolean positionKnown = false;
     private long lastAccessorPosition = -1;
+    private long lastTimeSynced;
 
     /**
      * Updates the current track, position and playback state.
@@ -55,6 +56,13 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
             // Handle track changes
             if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
+                // Wait two seconds before updating the track, so Spotify has enough time to update the playback
+                if ((!this.hasTrack() || playback.getLength() == this.currentTrack.getLength())
+                        && playback.getPosition() >= this.currentPosition
+                        && System.currentTimeMillis() - this.lastTimeSynced < 2000) {
+                    return;
+                }
+
                 SpotifyTitle title = this.process.getTitle();
                 if (title != SpotifyTitle.UNKNOWN) {
                     int trackLength = playback.getLength();
@@ -91,6 +99,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
             // Fire keep alive
             this.listeners.forEach(SpotifyListener::onSync);
+            this.lastTimeSynced = System.currentTimeMillis();
         } catch (Exception exception) {
             // Fire on disconnect
             this.listeners.forEach(listener -> listener.onDisconnect(exception));
@@ -132,7 +141,13 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (this.isPlaying) {
             // Interpolate position
             long timePassed = System.currentTimeMillis() - this.lastTimePositionUpdated;
-            return this.currentPosition + (int) timePassed;
+            long interpolatedPosition = this.currentPosition + timePassed;
+
+            if (this.hasTrack()) {
+                return (int) Math.min(interpolatedPosition, this.currentTrack.getLength());
+            } else {
+                return (int) interpolatedPosition;
+            }
         } else {
             return this.currentPosition;
         }

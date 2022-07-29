@@ -66,7 +66,15 @@ public class SpotifyProcess extends WinProcess {
                 PREFIX_CONTEXT,
                 (address, index) -> {
                     PlaybackAccessor accessor = new PlaybackAccessor(this, address);
-                    return accessor.isValid() && accessor.isPlaying() == isPlaying; // Check if address is valid
+                    boolean valid = accessor.isValid() && accessor.isPlaying() == isPlaying; // Check if address is valid
+
+                    // If valid then pull the data again and check if it is still valid
+                    if (valid) {
+                        accessor.update();
+                        return accessor.isValid();
+                    }
+
+                    return false;
                 }
         );
         if (this.addressPlayBack == -1) {
