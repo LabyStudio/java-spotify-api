@@ -13,10 +13,8 @@ public class SpotifyProcess extends WinProcess {
     private static final boolean DEBUG = System.getProperty("SPOTIFY_API_DEBUG") != null;
 
     // Spotify track id
-    private static final String CHROME_ELF_DLL = "chrome_elf.dll";
+    private static final String CHROME_ELF_DLL_FUNCTION = "DumpHungProcessWithPtype_ExportThunk";
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
-    private static final long OFFSET_CHROME_ELF_2 = 4871;
-    private static final long OFFSET_TRACK_ID = 105700;
 
     // Spotify playback
     private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
@@ -44,10 +42,8 @@ public class SpotifyProcess extends WinProcess {
         long timeScanStart = System.currentTimeMillis();
 
         // Find address of track id (Located in the chrome_elf.dll module)
-        this.addressTrackId = this.findAddressUsingRules(new SearchRule(CHROME_ELF_DLL, (address, index)
-                -> this.hasText(address + OFFSET_CHROME_ELF_2, CHROME_ELF_DLL)
-                && this.hasText(address + OFFSET_TRACK_ID, PREFIX_SPOTIFY_TRACK)
-        )) + OFFSET_TRACK_ID;
+        long chromeElfAddress = this.findAddressOfText(0, CHROME_ELF_DLL_FUNCTION, 1);
+        this.addressTrackId = this.findAddressOfText(chromeElfAddress, PREFIX_SPOTIFY_TRACK, 0);
 
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");
