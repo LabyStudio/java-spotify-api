@@ -35,8 +35,9 @@ public class OpenSpotifyAPI {
 
     private final Executor executor = Executors.newSingleThreadExecutor();
 
-    private final Map<Track, BufferedImage> imageCache = new ConcurrentHashMap<>();
-    private final List<Track> cacheQueue = new ArrayList<>();
+    private final Map<Track, String> urlCache = new ConcurrentHashMap<>();
+    private final Map<String, BufferedImage> imageCache = new ConcurrentHashMap<>();
+    private final List<String> cacheQueue = new ArrayList<>();
     private int cacheSize = 10;
 
     private AccessTokenResponse accessTokenResponse;
@@ -95,6 +96,26 @@ public class OpenSpotifyAPI {
     }
 
     /**
+     * Request the cover image url of the given track asynchronously.
+     * If the track is already in the cache, it will be returned.
+     *
+     * @param track    The track to lookup
+     * @param callback Response with the image url of the track. It won't be called on an error.
+     */
+    public void requestImageUrlAsync(Track track, Consumer<String> callback) {
+        this.executor.execute(() -> {
+            try {
+                String imageUrl = this.requestImageUrl(track);
+                if (imageUrl != null) {
+                    callback.accept(imageUrl);
+                }
+            } catch (Exception error) {
+                error.printStackTrace();
+            }
+        });
+    }
+
+    /**
      * Request the cover image of the given track synchronously.
      * If the track is already in the cache, it will be returned.
      *
@@ -103,22 +124,61 @@ public class OpenSpotifyAPI {
      * @throws IOException if the request failed
      */
     public BufferedImage requestImage(Track track) throws IOException {
-        return this.requestImage(track, true);
+        String url = this.requestImageUrl(track);
+        if (url == null) {
+            return null;
+        }
+
+        // Try to get image from cache by url
+        BufferedImage cachedImage = this.imageCache.get(url);
+        if (cachedImage != null) {
+            return cachedImage;
+        }
+
+        // Download the image
+        BufferedImage image = ImageIO.read(new URL(url));
+        if (image == null) {
+            throw new IOException("Could not load image: " + url);
+        }
+
+        // Remove image from cache if cache is full
+        if (this.cacheQueue.size() > this.cacheSize) {
+            String urlToRemove = this.cacheQueue.remove(0);
+            this.imageCache.remove(urlToRemove);
+        }
+
+        // Add new image to cache
+        this.imageCache.put(url, image);
+        this.cacheQueue.add(url);
+
+        return image;
     }
 
     /**
-     * Request the cover image of the given track.
+     * Request the cover image url of the given track.
+     * If the track is already in the cache, it will be returned.
+     *
+     * @param track The track to lookup
+     * @return The url of the track or null if it failed
+     * @throws IOException if the request failed
+     */
+    public String requestImageUrl(Track track) throws IOException {
+        return this.requestImageUrl(track, true);
+    }
+
+    /**
+     * Request the cover image url of the given track.
      * If the track is already in the cache, it will be returned.
      *
      * @param track                     The track to lookup
      * @param canGenerateNewAccessToken It will try again once if it fails
-     * @return Buffered image track.
+     * @return The url of the track or null if it failed
      * @throws IOException if the request failed
      */
-    private BufferedImage requestImage(Track track, boolean canGenerateNewAccessToken) throws IOException {
-        BufferedImage cachedImage = this.imageCache.get(track);
-        if (cachedImage != null) {
-            return cachedImage;
+    private String requestImageUrl(Track track, boolean canGenerateNewAccessToken) throws IOException {
+        String cachedUrl = this.urlCache.get(track);
+        if (cachedUrl != null) {
+            return cachedUrl;
         }
 
         // Create REST API url
@@ -140,7 +200,7 @@ public class OpenSpotifyAPI {
                 this.accessTokenResponse = this.generateAccessToken();
 
                 // Try again
-                return this.requestImage(track, false);
+                return this.requestImageUrl(track, false);
             } else {
                 // Request failed twice
                 return null;
@@ -154,24 +214,10 @@ public class OpenSpotifyAPI {
         // Get largest image url
         String imageUrl = openTrack.album.images.get(0).url;
 
-        // Download cover image
+        // Cache url and return it
         if (imageUrl != null) {
-            BufferedImage image = ImageIO.read(new URL(imageUrl));
-            if (image == null) {
-                throw new IOException("Could not load image: " + imageUrl);
-            }
-
-            // Remove image from cache if cache is full
-            if (this.cacheQueue.size() > this.cacheSize) {
-                Track element = this.cacheQueue.remove(0);
-                this.imageCache.remove(element);
-            }
-
-            // Add new image to cache
-            this.imageCache.put(track, image);
-            this.cacheQueue.add(track);
-
-            return image;
+            this.urlCache.put(track, imageUrl);
+            return imageUrl;
         }
 
         return null;
