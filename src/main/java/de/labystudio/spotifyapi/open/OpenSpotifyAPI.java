@@ -190,7 +190,10 @@ public class OpenSpotifyAPI {
         connection.addRequestProperty("referer", "https://open.spotify.com/");
         connection.addRequestProperty("app-platform", "WebPlayer");
         connection.addRequestProperty("origin", "https://open.spotify.com");
-        connection.addRequestProperty("authorization", "Bearer " + this.accessTokenResponse.accessToken);
+
+        if (this.accessTokenResponse != null) {
+            connection.addRequestProperty("authorization", "Bearer " + this.accessTokenResponse.accessToken);
+        }
 
         // Access token outdated
         if (connection.getResponseCode() / 100 != 2) {
