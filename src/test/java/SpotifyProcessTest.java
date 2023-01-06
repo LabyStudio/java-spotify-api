@@ -1,4 +1,5 @@
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
+import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
 
 public class SpotifyProcessTest {
@@ -7,13 +8,11 @@ public class SpotifyProcessTest {
 
     public static void main(String[] args) {
         WinProcess process = new WinProcess("Spotify.exe");
+        Psapi.ModuleInfo moduleInfo = process.getModuleInfo("chrome_elf.dll");
+        System.out.println("chrome_elf.dll address: 0x" + Long.toHexString(moduleInfo.getBaseOfDll()));
 
-        long addressTrackId = process.findAddressOfText(
-                process.getMaxContentAddress() / 2,
-                "spotify:track:",
-                (address, index) -> process.hasBytes(address + 1028, 0xDC, 0xA1)
-        );
-        System.out.println("Track Id Address: " + Long.toHexString(addressTrackId));
+        long addressTrackId = process.findAddressOfText(moduleInfo.getBaseOfDll(), "spotify:track:", 0);
+        System.out.println("Track Id Address: 0x" + Long.toHexString(addressTrackId));
 
         long addressPlayBack = process.findInMemory(
                 0,
@@ -24,8 +23,7 @@ public class SpotifyProcessTest {
                     return accessor.isValid();
                 }
         );
-        System.out.println("Playback Address: " + Long.toHexString(addressPlayBack));
-
+        System.out.println("Playback Address: 0x" + Long.toHexString(addressPlayBack));
     }
 
 }

@@ -6,6 +6,7 @@ import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.ptr.IntByReference;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Kernel32;
+import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 
 import java.util.Map;
 
@@ -20,8 +21,6 @@ public class WinProcess implements WinApi {
     protected final int processId;
     protected final WinNT.HANDLE handle;
     protected final WinDef.HWND window;
-
-    protected final long maxContentAddress;
 
     /**
      * Creates a new instance of the {@link WinProcess} class.
@@ -44,8 +43,6 @@ public class WinProcess implements WinApi {
         if (this.getWindowTitle().isEmpty()) {
             throw new IllegalStateException("Window for process " + this.processId + " not found");
         }
-
-        this.maxContentAddress = this.getModuleAddress("wow64cpu.dll");
     }
 
     /**
@@ -231,7 +228,7 @@ public class WinProcess implements WinApi {
      * @return The address of the text at the given index
      */
     public long findAddressOfText(long start, String text, SearchCondition condition) {
-        return this.findInMemory(start, this.maxContentAddress, text.getBytes(), condition);
+        return this.findInMemory(start, Integer.MAX_VALUE, text.getBytes(), condition);
     }
 
     /**
@@ -271,22 +268,22 @@ public class WinProcess implements WinApi {
     }
 
     /**
-     * Find the base address of the given module name.
+     * Get the module information of the given module name.
      *
      * @param moduleName The name of the module.
-     * @return The base address of the module.
+     * @return Information of the given module
      */
-    public long getModuleAddress(String moduleName) {
-        return this.getModuleAddress(this.processId, moduleName);
+    public Psapi.ModuleInfo getModuleInfo(String moduleName) {
+        return this.getModuleInfo(this.handle, moduleName);
     }
 
     /**
-     * Collect all module addresses and their size of the given process.
+     * Collect all module names and address information.
      *
-     * @return A list of module addresses and their size.
+     * @return A map of all modules with their name and address information.
      */
-    public Map<Long, Long> getModules() {
-        return this.getModules(this.processId);
+    public Map<String, Psapi.ModuleInfo> getModules() {
+        return this.getModules(this.handle);
     }
 
     /**
@@ -296,8 +293,8 @@ public class WinProcess implements WinApi {
      */
     public long getFirstModuleAddress() {
         long minAddress = Long.MAX_VALUE;
-        for (Map.Entry<Long, Long> module : this.getModules(this.processId).entrySet()) {
-            minAddress = Math.min(minAddress, module.getKey() + module.getValue());
+        for (Map.Entry<String, Psapi.ModuleInfo> module : this.getModules().entrySet()) {
+            minAddress = Math.min(minAddress, module.getValue().getBaseOfDll());
         }
         return minAddress;
     }
@@ -310,8 +307,8 @@ public class WinProcess implements WinApi {
      */
     public long getMaxProcessAddress() {
         long maxAddress = 0;
-        for (Map.Entry<Long, Long> module : this.getModules(this.processId).entrySet()) {
-            maxAddress = Math.max(maxAddress, module.getKey() + module.getValue());
+        for (Map.Entry<String, Psapi.ModuleInfo> module : this.getModules().entrySet()) {
+            maxAddress = Math.max(maxAddress, module.getValue().getBaseOfDll() + module.getValue().getSizeOfImage());
         }
         return maxAddress;
     }
@@ -357,15 +354,6 @@ public class WinProcess implements WinApi {
      */
     public void close() {
         Kernel32.INSTANCE.CloseHandle(this.handle);
-    }
-
-    /**
-     * Get the highest memory address with relevant content.
-     *
-     * @return The highest memory address with relevant content.
-     */
-    public long getMaxContentAddress() {
-        return this.maxContentAddress;
     }
 
     /**

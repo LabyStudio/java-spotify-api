@@ -1,6 +1,7 @@
 package de.labystudio.spotifyapi.platform.windows.api.spotify;
 
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
+import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
 
 /**
@@ -13,7 +14,6 @@ public class SpotifyProcess extends WinProcess {
     private static final boolean DEBUG = System.getProperty("SPOTIFY_API_DEBUG") != null;
 
     // Spotify track id
-    private static final String CHROME_ELF_DLL_FUNCTION = "DumpHungProcessWithPtype_ExportThunk";
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
 
     // Spotify playback
@@ -41,8 +41,13 @@ public class SpotifyProcess extends WinProcess {
 
         long timeScanStart = System.currentTimeMillis();
 
+        Psapi.ModuleInfo chromeElf = this.getModuleInfo("chrome_elf.dll");
+        if (chromeElf == null) {
+            throw new IllegalStateException("Could not find chrome_elf.dll module");
+        }
+
         // Find address of track id (Located in the chrome_elf.dll module)
-        long chromeElfAddress = this.findAddressOfText(0, CHROME_ELF_DLL_FUNCTION, 1);
+        long chromeElfAddress = chromeElf.getBaseOfDll();
         this.addressTrackId = this.findAddressOfText(chromeElfAddress, PREFIX_SPOTIFY_TRACK, 0);
 
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {

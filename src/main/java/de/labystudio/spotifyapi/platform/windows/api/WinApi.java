@@ -9,6 +9,7 @@ import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.platform.win32.WinUser;
 import com.sun.jna.ptr.IntByReference;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Kernel32;
+import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Tlhelp32;
 
 import java.util.ArrayList;
@@ -108,44 +109,76 @@ public interface WinApi {
         return Native.toString(Arrays.copyOf(buffer, length));
     }
 
-    default Map<Long, Long> getModules(long pid) {
-        Map<Long, Long> map = new HashMap<>();
+    default Map<String, Psapi.ModuleInfo> getModules(WinNT.HANDLE handle) {
+        Map<String, Psapi.ModuleInfo> modules = new HashMap<>();
 
-        WinNT.HANDLE snapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
-                Tlhelp32.TH32CS_SNAPMODULE,
-                new WinDef.DWORD(pid)
+        Psapi psapi = Psapi.INSTANCE;
+
+        // Get the list of modules
+        Pointer[] moduleHandles = new Pointer[1024];
+        psapi.EnumProcessModulesEx(
+                handle,
+                moduleHandles,
+                moduleHandles.length,
+                null,
+                Psapi.ModuleFilter.X32BIT
         );
-        if (snapshot == null) {
-            return map;
+
+        // Iterate over all modules
+        for (Pointer moduleHandle : moduleHandles) {
+            if (moduleHandle == null) {
+                break;
+            }
+
+            // Get module name
+            char[] characters = new char[1024];
+            int length = psapi.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
+            String moduleName = new String(characters, 0, length);
+
+            // Get module info
+            Psapi.ModuleInfo moduleInfo = new Psapi.ModuleInfo();
+            psapi.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
+            modules.put(moduleName, moduleInfo);
         }
 
-        Tlhelp32.MODULEENTRY32W moduleEntry = new Tlhelp32.MODULEENTRY32W.ByReference();
-        while (Kernel32.INSTANCE.Module32NextW(snapshot, moduleEntry)) {
-            map.put(Pointer.nativeValue(moduleEntry.modBaseAddr), moduleEntry.modBaseSize.longValue());
-        }
-        Kernel32.INSTANCE.CloseHandle(snapshot);
-        return map;
+        return modules;
     }
 
-    default long getModuleAddress(long pid, String moduleName) {
-        WinNT.HANDLE snapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
-                Tlhelp32.TH32CS_SNAPMODULE,
-                new WinDef.DWORD(pid)
-        );
-        if (snapshot == null) {
-            return 0;
-        }
+    default Psapi.ModuleInfo getModuleInfo(WinNT.HANDLE handle, String moduleName) {
+        Psapi psapi = Psapi.INSTANCE;
 
-        Tlhelp32.MODULEENTRY32W moduleEntry = new Tlhelp32.MODULEENTRY32W.ByReference();
-        while (Kernel32.INSTANCE.Module32NextW(snapshot, moduleEntry)) {
-            String name = Native.toString(moduleEntry.szModule);
-            if (name.equals(moduleName)) {
-                Kernel32.INSTANCE.CloseHandle(snapshot);
-                return Pointer.nativeValue(moduleEntry.modBaseAddr);
+        // Get the list of modules
+        Pointer[] moduleHandles = new Pointer[1024];
+        psapi.EnumProcessModulesEx(
+                handle,
+                moduleHandles,
+                moduleHandles.length,
+                null,
+                Psapi.ModuleFilter.X32BIT
+        );
+
+        // Iterate over all modules
+        for (Pointer moduleHandle : moduleHandles) {
+            if (moduleHandle == null) {
+                break;
+            }
+
+            // Get module name
+            char[] characters = new char[1024];
+            int length = psapi.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
+            String entryModuleName = new String(characters, 0, length);
+
+            // Compare with the name we are looking for
+            if (entryModuleName.equals(moduleName)) {
+
+                // Get module info
+                Psapi.ModuleInfo moduleInfo = new Psapi.ModuleInfo();
+                psapi.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
+
+                return moduleInfo;
             }
         }
-        Kernel32.INSTANCE.CloseHandle(snapshot);
-        return -1;
+        return null;
     }
 
     default void pressKey(int keyCode) {
