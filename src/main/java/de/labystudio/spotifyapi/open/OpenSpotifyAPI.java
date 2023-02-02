@@ -79,9 +79,20 @@ public class OpenSpotifyAPI {
      * @param callback Response with the buffered image track. It won't be called on an error.
      */
     public void requestImageAsync(Track track, Consumer<BufferedImage> callback) {
+        this.requestImageAsync(track.getId(), callback);
+    }
+
+    /**
+     * Request the cover image of the given track asynchronously.
+     * If the track is already in the cache, it will be returned.
+     *
+     * @param trackId  The track id to lookup
+     * @param callback Response with the buffered image track. It won't be called on an error.
+     */
+    public void requestImageAsync(String trackId, Consumer<BufferedImage> callback) {
         this.executor.execute(() -> {
             try {
-                BufferedImage image = this.requestImage(track);
+                BufferedImage image = this.requestImage(trackId);
                 if (image != null) {
                     callback.accept(image);
                 }
@@ -95,13 +106,13 @@ public class OpenSpotifyAPI {
      * Request the cover image url of the given track asynchronously.
      * If the track is already in the cache, it will be returned.
      *
-     * @param track    The track to lookup
+     * @param trackId  The track id to lookup
      * @param callback Response with the image url of the track. It won't be called on an error.
      */
-    public void requestImageUrlAsync(Track track, Consumer<String> callback) {
+    public void requestImageUrlAsync(String trackId, Consumer<String> callback) {
         this.executor.execute(() -> {
             try {
-                String imageUrl = this.requestImageUrl(track);
+                String imageUrl = this.requestImageUrl(trackId);
                 if (imageUrl != null) {
                     callback.accept(imageUrl);
                 }
@@ -119,9 +130,20 @@ public class OpenSpotifyAPI {
      * @param callback Response with the open track. It won't be called on an error.
      */
     public void requestOpenTrackAsync(Track track, Consumer<OpenTrack> callback) {
+        this.requestOpenTrackAsync(track.getId(), callback);
+    }
+
+    /**
+     * Request the track information of the given track asynchronously.
+     * If the open track is already in the cache, it will be returned.
+     *
+     * @param trackId  The track id to lookup
+     * @param callback Response with the open track. It won't be called on an error.
+     */
+    public void requestOpenTrackAsync(String trackId, Consumer<OpenTrack> callback) {
         this.executor.execute(() -> {
             try {
-                OpenTrack openTrack = this.requestOpenTrack(track);
+                OpenTrack openTrack = this.requestOpenTrack(trackId);
                 if (openTrack != null) {
                     callback.accept(openTrack);
                 }
@@ -140,14 +162,26 @@ public class OpenSpotifyAPI {
      * @throws IOException if the request failed
      */
     public BufferedImage requestImage(Track track) throws IOException {
+        return this.requestImage(track.getId());
+    }
+
+    /**
+     * Request the cover image of the given track synchronously.
+     * If the track is already in the cache, it will be returned.
+     *
+     * @param trackId The track id to lookup
+     * @return The buffered image of the track or null if it failed
+     * @throws IOException if the request failed
+     */
+    public BufferedImage requestImage(String trackId) throws IOException {
         // Try to get image from cache by track id
-        BufferedImage cachedImage = this.imageCache.get(track.getId());
+        BufferedImage cachedImage = this.imageCache.get(trackId);
         if (cachedImage != null) {
             return cachedImage;
         }
 
         // Request the image url
-        String url = this.requestImageUrl(track);
+        String url = this.requestImageUrl(trackId);
         if (url == null) {
             return null;
         }
@@ -159,7 +193,7 @@ public class OpenSpotifyAPI {
         }
 
         // Cache the image and return it
-        this.imageCache.push(track.getId(), image);
+        this.imageCache.push(trackId, image);
         return image;
     }
 
@@ -167,13 +201,13 @@ public class OpenSpotifyAPI {
      * Request the cover image url of the given track.
      * If the track is already in the cache, it will be returned.
      *
-     * @param track The track to lookup
+     * @param trackId The track id to lookup
      * @return The url of the track or null if it failed
      * @throws IOException if the request failed
      */
-    private String requestImageUrl(Track track) throws IOException {
+    private String requestImageUrl(String trackId) throws IOException {
         // Request track information
-        OpenTrack openTrack = this.requestOpenTrack(track);
+        OpenTrack openTrack = this.requestOpenTrack(trackId);
         if (openTrack == null) {
             return null;
         }
@@ -190,17 +224,28 @@ public class OpenSpotifyAPI {
      * @throws IOException if the request failed
      */
     public OpenTrack requestOpenTrack(Track track) throws IOException {
-        OpenTrack cachedOpenTrack = this.openTrackCache.get(track.getId());
+        return this.requestOpenTrack(track.getId());
+    }
+
+    /**
+     * Request the track information of the given track.
+     * If the open track is already in the cache, it will be returned.
+     *
+     * @param trackId The track id to lookup
+     * @throws IOException if the request failed
+     */
+    public OpenTrack requestOpenTrack(String trackId) throws IOException {
+        OpenTrack cachedOpenTrack = this.openTrackCache.get(trackId);
         if (cachedOpenTrack != null) {
             return cachedOpenTrack;
         }
 
         // Create REST API url
-        String url = String.format(URL_API_TRACKS, track.getId());
+        String url = String.format(URL_API_TRACKS, trackId);
         OpenTrack openTrack = this.request(url, OpenTrack.class, true);
 
         // Cache the open track and return it
-        this.openTrackCache.push(track.getId(), openTrack);
+        this.openTrackCache.push(trackId, openTrack);
         return openTrack;
     }
 
