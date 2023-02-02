@@ -24,6 +24,8 @@ import java.util.function.Consumer;
  */
 public class OpenSpotifyAPI {
 
+    private static final Gson GSON = new Gson();
+
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/71.0.3578.98";
 
     private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player";
@@ -113,7 +115,7 @@ public class OpenSpotifyAPI {
      * Request the track information of the given track asynchronously.
      * If the open track is already in the cache, it will be returned.
      *
-     * @param track The track to lookup
+     * @param track    The track to lookup
      * @param callback Response with the open track. It won't be called on an error.
      */
     public void requestOpenTrackAsync(Track track, Consumer<OpenTrack> callback) {
@@ -242,7 +244,7 @@ public class OpenSpotifyAPI {
 
         // Read response
         JsonReader reader = new JsonReader(new InputStreamReader(connection.getInputStream()));
-        return new Gson().fromJson(reader, clazz);
+        return GSON.fromJson(reader, clazz);
     }
 
     public Cache<BufferedImage> getImageCache() {
