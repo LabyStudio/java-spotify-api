@@ -294,7 +294,11 @@ public class WinProcess implements WinApi {
     public long getFirstModuleAddress() {
         long minAddress = Long.MAX_VALUE;
         for (Map.Entry<String, Psapi.ModuleInfo> module : this.getModules().entrySet()) {
-            minAddress = Math.min(minAddress, module.getValue().getBaseOfDll());
+            long baseOfDll = module.getValue().getBaseOfDll();
+            if (baseOfDll <= 0) {
+                continue;
+            }
+            minAddress = Math.min(minAddress, baseOfDll);
         }
         return minAddress;
     }

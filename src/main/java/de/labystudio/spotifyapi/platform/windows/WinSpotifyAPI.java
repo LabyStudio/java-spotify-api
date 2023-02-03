@@ -20,6 +20,8 @@ import java.util.Objects;
  */
 public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
+    private static final long RECONNECT_TIMEOUT = 1000 * 10L;
+
     private SpotifyProcess process;
 
     private Track currentTrack;
@@ -31,6 +33,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private long lastAccessorPosition = -1;
     private long lastTimeSynced;
 
+    private long lastTimeDisconnected = -1;
+
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
@@ -38,6 +42,13 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     protected void onTick() {
         try {
             if (!this.isConnected()) {
+                // Check if we passed the reconnect timeout
+                long timePassedSinceLastDisconnect = System.currentTimeMillis() - this.lastTimeDisconnected;
+                if (timePassedSinceLastDisconnect < RECONNECT_TIMEOUT) {
+                    return;
+                }
+
+                // Connect
                 this.process = new SpotifyProcess();
 
                 // Fire on connect
@@ -104,6 +115,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             // Fire on disconnect
             this.listeners.forEach(listener -> listener.onDisconnect(exception));
             this.process = null;
+            this.lastTimeDisconnected = System.currentTimeMillis();
         }
     }
 

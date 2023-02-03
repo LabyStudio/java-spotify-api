@@ -41,13 +41,13 @@ public class SpotifyProcess extends WinProcess {
 
         long timeScanStart = System.currentTimeMillis();
 
-        Psapi.ModuleInfo chromeElf = this.getModuleInfo("chrome_elf.dll");
-        if (chromeElf == null) {
+        Psapi.ModuleInfo chromeElfModule = this.getModuleInfo("chrome_elf.dll");
+        if (chromeElfModule == null) {
             throw new IllegalStateException("Could not find chrome_elf.dll module");
         }
 
         // Find address of track id (Located in the chrome_elf.dll module)
-        long chromeElfAddress = chromeElf.getBaseOfDll();
+        long chromeElfAddress = chromeElfModule.getBaseOfDll();
         this.addressTrackId = this.findAddressOfText(chromeElfAddress, PREFIX_SPOTIFY_TRACK, 0);
 
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
@@ -57,13 +57,19 @@ public class SpotifyProcess extends WinProcess {
             System.out.println("Found track id address: " + Long.toHexString(this.addressTrackId));
         }
 
+        // Get address range to search for playback
+        Psapi.ModuleInfo spotifyExeModule = this.getModuleInfo("Spotify.exe");
+        Psapi.ModuleInfo libCefModule = this.getModuleInfo("libcef.dll");
+        long minAddress = spotifyExeModule == null ? 0 : spotifyExeModule.getBaseOfDll();
+        long maxAddress = spotifyExeModule == null ? this.addressTrackId : libCefModule.getBaseOfDll();
+
         // Check if the song is currently playing using the title bar
         boolean isPlaying = this.isPlayingUsingTitle();
 
         // Find addresses of playback states
         this.addressPlayBack = this.findInMemory(
-                0,
-                this.addressTrackId,
+                minAddress,
+                maxAddress,
                 PREFIX_CONTEXT,
                 (address, index) -> {
                     PlaybackAccessor accessor = new PlaybackAccessor(this, address);
