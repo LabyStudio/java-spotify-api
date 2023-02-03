@@ -61,7 +61,7 @@ public class SpotifyProcess extends WinProcess {
         Psapi.ModuleInfo spotifyExeModule = this.getModuleInfo("Spotify.exe");
         Psapi.ModuleInfo libCefModule = this.getModuleInfo("libcef.dll");
         long minAddress = spotifyExeModule == null ? 0 : spotifyExeModule.getBaseOfDll();
-        long maxAddress = spotifyExeModule == null ? this.addressTrackId : libCefModule.getBaseOfDll();
+        long maxAddress = libCefModule == null ? this.addressTrackId : libCefModule.getBaseOfDll();
 
         // Check if the song is currently playing using the title bar
         boolean isPlaying = this.isPlayingUsingTitle();
