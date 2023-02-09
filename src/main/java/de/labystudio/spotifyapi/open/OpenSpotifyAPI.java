@@ -68,7 +68,7 @@ public class OpenSpotifyAPI {
 
         // Read response
         JsonReader reader = new JsonReader(new InputStreamReader(connection.getInputStream()));
-        return new Gson().fromJson(reader, AccessTokenResponse.class);
+        return GSON.fromJson(reader, AccessTokenResponse.class);
     }
 
     /**

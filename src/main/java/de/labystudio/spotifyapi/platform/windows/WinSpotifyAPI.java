@@ -20,8 +20,6 @@ import java.util.Objects;
  */
 public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
-    private static final long RECONNECT_TIMEOUT = 1000 * 10L;
-
     private SpotifyProcess process;
 
     private Track currentTrack;
@@ -33,90 +31,76 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private long lastAccessorPosition = -1;
     private long lastTimeSynced;
 
-    private long lastTimeDisconnected = -1;
 
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
      */
     protected void onTick() {
-        try {
-            if (!this.isConnected()) {
-                // Check if we passed the reconnect timeout
-                long timePassedSinceLastDisconnect = System.currentTimeMillis() - this.lastTimeDisconnected;
-                if (timePassedSinceLastDisconnect < RECONNECT_TIMEOUT) {
-                    return;
-                }
+        if (!this.isConnected()) {
+            // Connect
+            this.process = new SpotifyProcess();
 
-                // Connect
-                this.process = new SpotifyProcess();
-
-                // Fire on connect
-                this.listeners.forEach(SpotifyListener::onConnect);
-            }
-
-            PlaybackAccessor playback = this.process.getPlaybackAccessor();
-            String trackId = this.process.getTrackId();
-
-            // Update playback status and check if it is valid
-            if (!playback.update() || !this.process.isTrackIdValid(trackId)) {
-                this.positionKnown = false;
-                this.currentPosition = -1;
-                throw new IllegalStateException("Could not update playback");
-            }
-
-            // Handle track changes
-            if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-                // Wait two seconds before updating the track, so Spotify has enough time to update the playback
-                if ((!this.hasTrack() || playback.getLength() == this.currentTrack.getLength())
-                        && playback.getPosition() >= this.currentPosition
-                        && System.currentTimeMillis() - this.lastTimeSynced < 2000) {
-                    return;
-                }
-
-                SpotifyTitle title = this.process.getTitle();
-                if (title != SpotifyTitle.UNKNOWN) {
-                    int trackLength = playback.getLength();
-                    boolean isFirstTrack = !this.hasTrack();
-
-                    Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
-                    this.currentTrack = track;
-
-                    // Fire on track changed
-                    this.listeners.forEach(listener -> listener.onTrackChanged(track));
-
-                    // Reset position on song change
-                    if (!isFirstTrack) {
-                        this.updatePosition(0, true);
-                    }
-                }
-            }
-
-            // Handle is playing changes
-            boolean isPlaying = playback.isPlaying();
-            if (isPlaying != this.isPlaying) {
-                this.isPlaying = isPlaying;
-
-                // Fire on play back changed
-                this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
-            }
-
-            // Handle position changes
-            int position = playback.getPosition();
-            if (position != this.lastAccessorPosition) {
-                this.lastAccessorPosition = position;
-                this.updatePosition(position, false);
-            }
-
-            // Fire keep alive
-            this.listeners.forEach(SpotifyListener::onSync);
-            this.lastTimeSynced = System.currentTimeMillis();
-        } catch (Exception exception) {
-            // Fire on disconnect
-            this.listeners.forEach(listener -> listener.onDisconnect(exception));
-            this.process = null;
-            this.lastTimeDisconnected = System.currentTimeMillis();
+            // Fire on connect
+            this.listeners.forEach(SpotifyListener::onConnect);
         }
+
+        PlaybackAccessor playback = this.process.getPlaybackAccessor();
+        String trackId = this.process.getTrackId();
+
+        // Update playback status and check if it is valid
+        if (!playback.update() || !this.process.isTrackIdValid(trackId)) {
+            this.positionKnown = false;
+            this.currentPosition = -1;
+            throw new IllegalStateException("Could not update playback");
+        }
+
+        // Handle track changes
+        if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
+            // Wait two seconds before updating the track, so Spotify has enough time to update the playback
+            if ((!this.hasTrack() || playback.getLength() == this.currentTrack.getLength())
+                    && playback.getPosition() >= this.currentPosition
+                    && System.currentTimeMillis() - this.lastTimeSynced < 2000) {
+                return;
+            }
+
+            SpotifyTitle title = this.process.getTitle();
+            if (title != SpotifyTitle.UNKNOWN) {
+                int trackLength = playback.getLength();
+                boolean isFirstTrack = !this.hasTrack();
+
+                Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
+                this.currentTrack = track;
+
+                // Fire on track changed
+                this.listeners.forEach(listener -> listener.onTrackChanged(track));
+
+                // Reset position on song change
+                if (!isFirstTrack) {
+                    this.updatePosition(0, true);
+                }
+            }
+        }
+
+        // Handle is playing changes
+        boolean isPlaying = playback.isPlaying();
+        if (isPlaying != this.isPlaying) {
+            this.isPlaying = isPlaying;
+
+            // Fire on play back changed
+            this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
+        }
+
+        // Handle position changes
+        int position = playback.getPosition();
+        if (position != this.lastAccessorPosition) {
+            this.lastAccessorPosition = position;
+            this.updatePosition(position, false);
+        }
+
+        // Fire keep alive
+        this.listeners.forEach(SpotifyListener::onSync);
+        this.lastTimeSynced = System.currentTimeMillis();
     }
 
     private void updatePosition(int position, boolean force) {
@@ -172,6 +156,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     @Override
     public void pressMediaKey(MediaKey mediaKey) {
+        if (!this.isConnected()) {
+            throw new IllegalStateException("Spotify is not connected");
+        }
+
         switch (mediaKey) {
             case NEXT:
                 this.process.pressKey(WinApi.VK_MEDIA_NEXT_TRACK);

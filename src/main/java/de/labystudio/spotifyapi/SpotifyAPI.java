@@ -1,5 +1,6 @@
 package de.labystudio.spotifyapi;
 
+import de.labystudio.spotifyapi.config.SpotifyConfiguration;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 
@@ -17,13 +18,38 @@ public interface SpotifyAPI {
     /**
      * Initialize the SpotifyAPI and connect to the Spotify process.
      * Initializing the api will block the current thread until the connection is established.
+     * It will use a default configuration.
      *
      * @return the initialized SpotifyAPI
      */
-    SpotifyAPI initialize();
+    default SpotifyAPI initialize() {
+        return this.initialize(new SpotifyConfiguration.Builder().build());
+    }
+
+    /**
+     * Initialize the SpotifyAPI and connect to the Spotify process.
+     * Initializing the api will block the current thread until the connection is established.
+     *
+     * @param configuration the configuration for the api
+     * @return the initialized SpotifyAPI
+     */
+    SpotifyAPI initialize(SpotifyConfiguration configuration);
+
 
     /**
      * Initialize the SpotifyAPI and connect to the Spotify process asynchronously.
+     *
+     * @param configuration the configuration for the api
+     * @return a future that will contain the initialized SpotifyAPI
+     */
+    default CompletableFuture<SpotifyAPI> initializeAsync(SpotifyConfiguration configuration) {
+        return CompletableFuture.supplyAsync(() -> this.initialize(configuration));
+    }
+
+
+    /**
+     * Initialize the SpotifyAPI and connect to the Spotify process asynchronously.
+     * It will use a default configuration.
      *
      * @return a future that will contain the initialized SpotifyAPI
      */
@@ -113,6 +139,13 @@ public interface SpotifyAPI {
      * @param listener the listener to unregister
      */
     void unregisterListener(SpotifyListener listener);
+
+    /**
+     * Returns the current set configuration of the api.
+     *
+     * @return the current set configuration of the api
+     */
+    SpotifyConfiguration getConfiguration();
 
     /**
      * Disconnect from the Spotify application and stop all background tasks.

@@ -1,12 +1,11 @@
 package de.labystudio.spotifyapi;
 
-import de.labystudio.spotifyapi.platform.windows.WinSpotifyAPI;
+import de.labystudio.spotifyapi.config.SpotifyConfiguration;
 import de.labystudio.spotifyapi.platform.osx.OSXSpotifyApi;
+import de.labystudio.spotifyapi.platform.windows.WinSpotifyAPI;
 
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * Factory class for creating SpotifyAPI instances.
@@ -38,11 +37,23 @@ public class SpotifyAPIFactory {
     /**
      * Create an initialized SpotifyAPI instance.
      * Initializing will block the current thread until the SpotifyAPI instance is ready.
+     * It will use a default configuration.
      *
      * @return A new SpotifyAPI instance.
      */
     public static SpotifyAPI createInitialized() {
         return create().initialize();
+    }
+
+    /**
+     * Create an initialized SpotifyAPI instance.
+     * Initializing will block the current thread until the SpotifyAPI instance is ready.
+     *
+     * @param configuration The configuration for the SpotifyAPI instance.
+     * @return A new SpotifyAPI instance.
+     */
+    public static SpotifyAPI createInitialized(SpotifyConfiguration configuration) {
+        return create().initialize(configuration);
     }
 
     /**
@@ -55,4 +66,15 @@ public class SpotifyAPIFactory {
         return CompletableFuture.supplyAsync(SpotifyAPIFactory::createInitialized);
     }
 
+    /**
+     * Creates a new SpotifyAPI instance for the current platform asynchronously.
+     * Currently, only Windows and OSX are supported.
+     * It will use a default configuration.
+     *
+     * @param configuration The configuration for the SpotifyAPI instance.
+     * @return A future that will contain the SpotifyAPI instance.
+     */
+    public static CompletableFuture<SpotifyAPI> createInitializedAsync(SpotifyConfiguration configuration) {
+        return CompletableFuture.supplyAsync(() -> createInitialized(configuration));
+    }
 }

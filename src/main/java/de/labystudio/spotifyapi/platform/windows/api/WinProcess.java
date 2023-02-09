@@ -206,6 +206,21 @@ public class WinProcess implements WinApi {
     }
 
     /**
+     * Search for the given text in the given module.
+     *
+     * @param moduleName The name of the module to search in.
+     * @param text       The text to search for.
+     * @return The address of the text in the given module
+     */
+    public long findAddressOfTextInModule(String moduleName, String text) {
+        Psapi.ModuleInfo moduleInfo = this.getModuleInfo(moduleName);
+        if (moduleInfo == null) {
+            return -1;
+        }
+        return this.findAddressOfText(moduleInfo.getBaseOfDll(), text, 0);
+    }
+
+    /**
      * Find the address of a text inside the memory.
      * If there are multiple matches of the text, the given index will be used to select the correct one.
      *
@@ -228,7 +243,21 @@ public class WinProcess implements WinApi {
      * @return The address of the text at the given index
      */
     public long findAddressOfText(long start, String text, SearchCondition condition) {
-        return this.findInMemory(start, Integer.MAX_VALUE, text.getBytes(), condition);
+        return this.findAddressOfText(start, Integer.MAX_VALUE, text, condition);
+    }
+
+    /**
+     * Find the address of a text inside the memory.
+     * If there are multiple matches of the text, the given index will be used to select the correct one.
+     *
+     * @param start     The address to start searching from.
+     * @param end       The address to stop searching at.
+     * @param text      The text to search for.
+     * @param condition The condition function to call for each matching address.
+     * @return The address of the text at the given index
+     */
+    public long findAddressOfText(long start, long end, String text, SearchCondition condition) {
+        return this.findInMemory(start, end, text.getBytes(), condition);
     }
 
     /**
