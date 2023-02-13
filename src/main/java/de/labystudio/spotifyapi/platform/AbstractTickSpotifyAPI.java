@@ -55,7 +55,7 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
         return this;
     }
 
-    private void onInternalTick() {
+    protected void onInternalTick() {
         try {
             // Check if we passed the exception timeout
             long timeSinceLastException = System.currentTimeMillis() - this.timeLastException;
@@ -78,7 +78,7 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
         }
     }
 
-    protected abstract void onTick();
+    protected abstract void onTick() throws Exception;
 
     @Override
     public void registerListener(SpotifyListener listener) {

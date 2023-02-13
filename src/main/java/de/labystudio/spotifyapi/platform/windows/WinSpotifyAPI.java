@@ -36,7 +36,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
      */
-    protected void onTick() {
+    protected void onTick() throws Exception {
         if (!this.isConnected()) {
             // Connect
             this.process = new SpotifyProcess();
@@ -173,7 +173,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
 
         // Update state immediately
-        this.onTick();
+        this.onInternalTick();
     }
 
     @Override

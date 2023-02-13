@@ -27,57 +27,58 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
     private long lastTimePositionUpdated;
 
     @Override
-    protected void onTick() {
-        try {
-            String trackId = this.appleScript.getTrackId();
+    protected void onTick() throws Exception {
+        String trackId = this.appleScript.getTrackId();
 
-            // Handle on connect
-            if (!this.connected && !trackId.isEmpty()) {
-                this.connected = true;
-                this.listeners.forEach(SpotifyListener::onConnect);
-            }
-
-            // Handle track changes
-            if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-                String trackName = this.appleScript.getTrackName();
-                String trackArtist = this.appleScript.getTrackArtist();
-                int trackLength = this.appleScript.getTrackLength();
-
-                boolean isFirstTrack = !this.hasTrack();
-
-                Track track = new Track(trackId, trackName, trackArtist, trackLength);
-                this.currentTrack = track;
-
-                // Fire on track changed
-                this.listeners.forEach(listener -> listener.onTrackChanged(track));
-
-                // Reset position on song change
-                if (!isFirstTrack) {
-                    this.updatePosition(0);
-                }
-            }
-
-            // Handle is playing changes
-            boolean isPlaying = this.appleScript.getPlayerState();
-            if (isPlaying != this.isPlaying) {
-                this.isPlaying = isPlaying;
-
-                // Fire on play back changed
-                this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
-            }
-
-            // Handle position changes
-            int position = this.appleScript.getPlayerPosition();
-            if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
-                this.updatePosition(position);
-            }
-
-            // Fire keep alive
-            this.listeners.forEach(SpotifyListener::onSync);
-        } catch (Exception e) {
-            this.listeners.forEach(listener -> listener.onDisconnect(e));
-            this.connected = false;
+        // Handle on connect
+        if (!this.connected && !trackId.isEmpty()) {
+            this.connected = true;
+            this.listeners.forEach(SpotifyListener::onConnect);
         }
+
+        // Handle track changes
+        if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
+            String trackName = this.appleScript.getTrackName();
+            String trackArtist = this.appleScript.getTrackArtist();
+            int trackLength = this.appleScript.getTrackLength();
+
+            boolean isFirstTrack = !this.hasTrack();
+
+            Track track = new Track(trackId, trackName, trackArtist, trackLength);
+            this.currentTrack = track;
+
+            // Fire on track changed
+            this.listeners.forEach(listener -> listener.onTrackChanged(track));
+
+            // Reset position on song change
+            if (!isFirstTrack) {
+                this.updatePosition(0);
+            }
+        }
+
+        // Handle is playing changes
+        boolean isPlaying = this.appleScript.getPlayerState();
+        if (isPlaying != this.isPlaying) {
+            this.isPlaying = isPlaying;
+
+            // Fire on play back changed
+            this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
+        }
+
+        // Handle position changes
+        int position = this.appleScript.getPlayerPosition();
+        if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
+            this.updatePosition(position);
+        }
+
+        // Fire keep alive
+        this.listeners.forEach(SpotifyListener::onSync);
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        this.connected = false;
     }
 
     private void updatePosition(int position) {
