@@ -7,69 +7,89 @@ import java.util.List;
 
 public class OpenTrack {
 
-    public Album album;
+	public Album album;
 
-    public List<Artist> artists = null;
+	public List<Artist> artists = null;
 
-    @SerializedName("available_markets")
-    public List<Object> availableMarkets = null;
+	@SerializedName("available_markets")
+	public List<Object> availableMarkets = null;
 
-    @SerializedName("disc_number")
-    public Integer discNumber;
+	@SerializedName("disc_number")
+	public Integer discNumber;
 
-    @SerializedName("duration_ms")
-    public Integer durationMs;
+	@SerializedName("duration_ms")
+	public Integer durationMs;
 
-    public Boolean explicit;
+	public Boolean explicit;
 
-    @SerializedName("external_ids")
-    public ExternalIds externalIds;
+	@SerializedName("external_ids")
+	public ExternalIds externalIds;
 
-    @SerializedName("external_urls")
-    public ExternalUrls externalUrls;
+	@SerializedName("external_urls")
+	public ExternalUrls externalUrls;
 
-    public String href;
+	public String href;
 
-    public String id;
+	public String id;
 
-    @SerializedName("is_local")
-    public Boolean isLocal;
+	@SerializedName("is_local")
+	public Boolean isLocal;
 
-    public String name;
+	public String name;
 
-    public Integer popularity;
+	public Integer popularity;
 
-    @SerializedName("preview_url")
-    public Object previewUrl;
+	@SerializedName("preview_url")
+	public Object previewUrl;
 
-    @SerializedName("track_number")
-    public Integer trackNumber;
+	@SerializedName("track_number")
+	public Integer trackNumber;
 
-    public String type;
+	public String type;
 
-    public String uri;
+	public String uri;
 
-		private transient String joinedArtists;
+	private transient String joinedArtists;
 
-		public String getArtists() {
-			if (this.joinedArtists == null) {
-				if (this.artists == null || this.artists.isEmpty()) {
-					return null;
-				}
-
-				StringBuilder builder = new StringBuilder();
-				for (Artist artist : this.artists) {
-					builder.append(", ");
-					builder.append(artist.name);
-				}
-
-				this.joinedArtists = builder.substring(2);
-			}
-
-			return this.joinedArtists;
+	/**
+	 * Joins the artists to a single string.
+	 *
+	 * @return the artists name, split with comma
+	 */
+	public String getArtists() {
+		if (this.joinedArtists == null) {
+			this.joinedArtists = this.getArtists(", ");
 		}
 
-		public Track mergeWith(Track target) {
-			return new Track(target.getId(), this.name, this.getArtists(), target.getLength());
+		return this.joinedArtists;
+	}
+
+	/**
+	 * Joins the artists to a single string.
+	 *
+	 * @param delimiter The delimiter to split the artists with
+	 * @return the artists name, split the provided delimiter
+	 */
+	public String getArtists(String delimiter) {
+		if (this.artists == null || this.artists.isEmpty()) {
+			return null;
 		}
+
+		StringBuilder builder = new StringBuilder();
+		for (Artist artist : this.artists) {
+			builder.append(delimiter);
+			builder.append(artist.name);
+		}
+
+		return builder.substring(delimiter.length());
+	}
+
+	/**
+	 * Create a new {@link Track} based on the current object.
+	 *
+	 * @return The new {@link Track} object
+	 */
+	public Track toTrack() {
+		return new Track(this.id, this.name, this.getArtists(), this.durationMs);
+	}
 }
