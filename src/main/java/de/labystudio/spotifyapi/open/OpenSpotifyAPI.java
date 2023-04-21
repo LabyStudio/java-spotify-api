@@ -35,7 +35,7 @@ public class OpenSpotifyAPI {
     private final Executor executor = Executors.newSingleThreadExecutor();
 
     private final Cache<BufferedImage> imageCache = new Cache<>(10);
-    private final OpenTrackCache openTrackCache = new OpenTrackCache(100);
+    private final Cache<OpenTrack> openTrackCache = new Cache<>(100);
 
     private AccessTokenResponse accessTokenResponse;
 
@@ -246,7 +246,7 @@ public class OpenSpotifyAPI {
         OpenTrack openTrack = this.request(url, OpenTrack.class, true);
 
         // Cache the open track and return it
-        this.openTrackCache.add(openTrack);
+        this.openTrackCache.push(trackId, openTrack);
         return openTrack;
     }
 
@@ -301,7 +301,7 @@ public class OpenSpotifyAPI {
         return this.imageCache;
     }
 
-    public OpenTrackCache getOpenTrackCache() {
+    public Cache<OpenTrack> getOpenTrackCache() {
         return this.openTrackCache;
     }
 }
