@@ -12,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -34,7 +35,7 @@ public class OpenSpotifyAPI {
     private final Executor executor = Executors.newSingleThreadExecutor();
 
     private final Cache<BufferedImage> imageCache = new Cache<>(10);
-    private final Cache<OpenTrack> openTrackCache = new Cache<>(100);
+    private final OpenTrackCache openTrackCache = new OpenTrackCache(100);
 
     private AccessTokenResponse accessTokenResponse;
 
@@ -245,7 +246,7 @@ public class OpenSpotifyAPI {
         OpenTrack openTrack = this.request(url, OpenTrack.class, true);
 
         // Cache the open track and return it
-        this.openTrackCache.push(trackId, openTrack);
+        this.openTrackCache.add(openTrack);
         return openTrack;
     }
 
@@ -288,7 +289,11 @@ public class OpenSpotifyAPI {
         }
 
         // Read response
-        JsonReader reader = new JsonReader(new InputStreamReader(connection.getInputStream()));
+        JsonReader reader = new JsonReader(new InputStreamReader(
+            connection.getInputStream(),
+            StandardCharsets.UTF_8
+        ));
+
         return GSON.fromJson(reader, clazz);
     }
 
@@ -296,7 +301,7 @@ public class OpenSpotifyAPI {
         return this.imageCache;
     }
 
-    public Cache<OpenTrack> getOpenTrackCache() {
+    public OpenTrackCache getOpenTrackCache() {
         return this.openTrackCache;
     }
 }

@@ -1,7 +1,7 @@
-
 package de.labystudio.spotifyapi.open.model.track;
 
 import com.google.gson.annotations.SerializedName;
+import de.labystudio.spotifyapi.model.Track;
 
 import java.util.List;
 
@@ -49,4 +49,27 @@ public class OpenTrack {
 
     public String uri;
 
+		private transient String joinedArtists;
+
+		public String getArtists() {
+			if (this.joinedArtists == null) {
+				if (this.artists == null || this.artists.isEmpty()) {
+					return null;
+				}
+
+				StringBuilder builder = new StringBuilder();
+				for (Artist artist : this.artists) {
+					builder.append(", ");
+					builder.append(artist.name);
+				}
+
+				this.joinedArtists = builder.substring(2);
+			}
+
+			return this.joinedArtists;
+		}
+
+		public Track mergeWith(Track target) {
+			return new Track(target.getId(), this.name, this.getArtists(), target.getLength());
+		}
 }
