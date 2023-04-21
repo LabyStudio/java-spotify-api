@@ -12,6 +12,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -288,7 +289,11 @@ public class OpenSpotifyAPI {
         }
 
         // Read response
-        JsonReader reader = new JsonReader(new InputStreamReader(connection.getInputStream()));
+        JsonReader reader = new JsonReader(new InputStreamReader(
+            connection.getInputStream(),
+            StandardCharsets.UTF_8
+        ));
+
         return GSON.fromJson(reader, clazz);
     }
 
