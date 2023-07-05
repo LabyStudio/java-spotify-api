@@ -24,4 +24,6 @@ public interface Kernel32 extends WinNT, StdCallLibrary {
     boolean CloseHandle(HANDLE hObject);
 
     HANDLE OpenProcess(int fdwAccess, boolean fInherit, int IDProcess);
+
+    int GetLastError();
 }

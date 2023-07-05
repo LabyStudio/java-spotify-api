@@ -77,6 +77,10 @@ public interface WinApi {
     }
 
     default WinDef.HWND openWindow(int processId) {
+        return this.openWindow(processId, hWnd -> true);
+    }
+
+    default WinDef.HWND openWindow(int processId, WindowCondition condition) {
         AtomicReference<WinDef.HWND> window = new AtomicReference<>();
 
         // Iterate over all windows and find the one with the given processId
@@ -87,7 +91,7 @@ public interface WinApi {
             User32.INSTANCE.GetWindowThreadProcessId(hWnd, reference);
 
             // Check if the window belongs to the process
-            if (reference.getValue() == processId && this.isWindowVisible(hWnd)) {
+            if (reference.getValue() == processId && this.isWindowVisible(hWnd) && condition.test(hWnd)) {
                 window.set(hWnd);
                 return false;
             }
@@ -112,32 +116,17 @@ public interface WinApi {
     default Map<String, Psapi.ModuleInfo> getModules(WinNT.HANDLE handle) {
         Map<String, Psapi.ModuleInfo> modules = new HashMap<>();
 
-        Psapi psapi = Psapi.INSTANCE;
-
-        // Get the list of modules
-        Pointer[] moduleHandles = new Pointer[1024];
-        psapi.EnumProcessModulesEx(
-                handle,
-                moduleHandles,
-                moduleHandles.length,
-                null,
-                Psapi.ModuleFilter.X32BIT
-        );
-
         // Iterate over all modules
+        Pointer[] moduleHandles = this.getModuleHandles(handle);
         for (Pointer moduleHandle : moduleHandles) {
-            if (moduleHandle == null) {
-                break;
-            }
-
             // Get module name
             char[] characters = new char[1024];
-            int length = psapi.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
+            int length = Psapi.INSTANCE.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
             String moduleName = new String(characters, 0, length);
 
             // Get module info
             Psapi.ModuleInfo moduleInfo = new Psapi.ModuleInfo();
-            psapi.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
+            Psapi.INSTANCE.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
             modules.put(moduleName, moduleInfo);
         }
 
@@ -145,27 +134,13 @@ public interface WinApi {
     }
 
     default Psapi.ModuleInfo getModuleInfo(WinNT.HANDLE handle, String moduleName) {
-        Psapi psapi = Psapi.INSTANCE;
-
-        // Get the list of modules
-        Pointer[] moduleHandles = new Pointer[1024];
-        psapi.EnumProcessModulesEx(
-                handle,
-                moduleHandles,
-                moduleHandles.length,
-                null,
-                Psapi.ModuleFilter.X32BIT
-        );
+        Pointer[] moduleHandles = this.getModuleHandles(handle);
 
         // Iterate over all modules
         for (Pointer moduleHandle : moduleHandles) {
-            if (moduleHandle == null) {
-                break;
-            }
-
             // Get module name
             char[] characters = new char[1024];
-            int length = psapi.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
+            int length = Psapi.INSTANCE.GetModuleBaseName(handle, moduleHandle, characters, characters.length);
             String entryModuleName = new String(characters, 0, length);
 
             // Compare with the name we are looking for
@@ -173,12 +148,36 @@ public interface WinApi {
 
                 // Get module info
                 Psapi.ModuleInfo moduleInfo = new Psapi.ModuleInfo();
-                psapi.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
+                Psapi.INSTANCE.GetModuleInformation(handle, moduleHandle, moduleInfo, moduleInfo.size());
 
                 return moduleInfo;
             }
         }
+
         return null;
+    }
+
+    default Pointer[] getModuleHandles(WinNT.HANDLE handle) {
+        IntByReference amountRef = new IntByReference();
+
+        // Get the list of modules
+        Pointer[] moduleHandles = new Pointer[2048];
+        if (!Psapi.INSTANCE.EnumProcessModulesEx(
+                handle,
+                moduleHandles,
+                moduleHandles.length,
+                amountRef,
+                Psapi.ModuleFilter.ALL
+        )) {
+            throw new RuntimeException("Failed to get module list: ERROR " + Kernel32.INSTANCE.GetLastError());
+        }
+
+        int amount = amountRef.getValue();
+        if (amount == 0) {
+            throw new RuntimeException("No modules found");
+        }
+
+        return Arrays.copyOf(moduleHandles, amount);
     }
 
     default void pressKey(int keyCode) {
@@ -199,5 +198,9 @@ public interface WinApi {
         input.input.ki.dwFlags = new WinDef.DWORD(2);  // Key up
         User32.INSTANCE.SendInput(new WinDef.DWORD(1), new WinUser.INPUT[]{input}, input.size());
 
+    }
+
+    public interface WindowCondition {
+        boolean test(WinDef.HWND window);
     }
 }

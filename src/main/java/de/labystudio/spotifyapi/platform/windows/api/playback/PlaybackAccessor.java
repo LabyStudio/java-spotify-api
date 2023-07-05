@@ -22,22 +22,17 @@ public class PlaybackAccessor {
     /**
      * Creates a new instance of the PlaybackAccessor.
      *
-     * @param process            The Spotify process to read from.
-     * @param contextBaseAddress The base address of the context.
+     * @param process The Spotify process to read from.
+     * @param address The reference address of the playback section
      */
-    public PlaybackAccessor(WinProcess process, long contextBaseAddress) {
+    public PlaybackAccessor(WinProcess process, long address) {
         this.process = process;
 
         // Create pointer registry to calculate the absolute addresses using the relative offsets
-        this.pointerRegistry = new PointerRegistry(0x0D3A2064, contextBaseAddress);
-        this.pointerRegistry.register("position", 0x0D3A2178);
-        this.pointerRegistry.register("length", 0x0D3A2188);
-        this.pointerRegistry.register("is_playing", 0x0D3A21AC);
-
-        // Parity pointers to make sure that we have the correct base address
-        this.pointerRegistry.register("parity_1", 0x0D3A2199);
-        this.pointerRegistry.register("parity_2", 0x0D3A21A4);
-        this.pointerRegistry.register("parity_3", 0x0D3A216E);
+        this.pointerRegistry = new PointerRegistry(0x0CFF4498, address);
+        this.pointerRegistry.register("position", 0x0CFF4810);
+        this.pointerRegistry.register("length", 0x0CFF4820);
+        this.pointerRegistry.register("is_playing", 0x0CFF4850); // 1=true, 0=false
 
         this.update();
     }
@@ -73,10 +68,7 @@ public class PlaybackAccessor {
         return this.position <= this.length
                 && this.position >= 0
                 && this.length <= MAX_TRACK_DURATION
-                && this.length >= MIN_TRACK_DURATION
-                && this.process.readBoolean(this.pointerRegistry.getAddress("parity_1")) != this.isPlaying
-                && this.process.readBoolean(this.pointerRegistry.getAddress("parity_2")) != this.isPlaying
-                && (this.process.readByte(this.pointerRegistry.getAddress("parity_3")) == 0) != this.isPlaying;
+                && this.length >= MIN_TRACK_DURATION;
     }
 
     public int getLength() {

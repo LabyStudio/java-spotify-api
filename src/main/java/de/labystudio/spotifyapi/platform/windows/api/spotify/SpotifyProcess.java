@@ -15,9 +15,7 @@ public class SpotifyProcess extends WinProcess {
 
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
-
-    // Spotify playback
-    private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
+    private static final long ADDRESS_OFFSET_TRACK_ID = 0x1499F0;
 
     private final long addressTrackId;
     private final long addressPlayBack;
@@ -48,42 +46,27 @@ public class SpotifyProcess extends WinProcess {
 
         // Find address of track id (Located in the chrome_elf.dll module)
         long chromeElfAddress = chromeElfModule.getBaseOfDll();
-        this.addressTrackId = this.findAddressOfText(chromeElfAddress, PREFIX_SPOTIFY_TRACK, 0);
+        this.addressTrackId = chromeElfAddress + ADDRESS_OFFSET_TRACK_ID;
 
         if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
             throw new IllegalStateException("Could not find track id in memory");
         }
+
         if (DEBUG) {
-            System.out.println("Found track id address: " + Long.toHexString(this.addressTrackId));
+            System.out.printf(
+                    "Found track id address: %s (+%s) [%s%s]%n",
+                    Long.toHexString(this.addressTrackId),
+                    Long.toHexString(this.addressTrackId - chromeElfAddress),
+                    PREFIX_SPOTIFY_TRACK,
+                    this.getTrackId()
+            );
         }
 
-        // Get address range to search for playback
-        Psapi.ModuleInfo spotifyExeModule = this.getModuleInfo("Spotify.exe");
-        Psapi.ModuleInfo libCefModule = this.getModuleInfo("libcef.dll");
-        long minAddress = spotifyExeModule == null ? 0 : spotifyExeModule.getBaseOfDll();
-        long maxAddress = libCefModule == null ? this.addressTrackId : libCefModule.getBaseOfDll();
-
-        // Check if the song is currently playing using the title bar
-        boolean isPlaying = this.isPlayingUsingTitle();
-
         // Find addresses of playback states
-        this.addressPlayBack = this.findInMemory(
-                minAddress,
-                maxAddress,
-                PREFIX_CONTEXT,
-                (address, index) -> {
-                    PlaybackAccessor accessor = new PlaybackAccessor(this, address);
-                    boolean valid = accessor.isValid() && accessor.isPlaying() == isPlaying; // Check if address is valid
-
-                    // If valid then pull the data again and check if it is still valid
-                    if (valid) {
-                        accessor.update();
-                        return accessor.isValid();
-                    }
-
-                    return false;
-                }
-        );
+        this.addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
+            return this.hasText(address + 128, "your_library", "home")
+                    && this.hasText(address + 408, "context", "autoplay");
+        });
         if (this.addressPlayBack == -1) {
             throw new IllegalStateException("Could not find playback in memory");
         }

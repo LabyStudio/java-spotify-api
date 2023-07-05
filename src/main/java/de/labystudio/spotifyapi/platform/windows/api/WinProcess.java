@@ -1,5 +1,7 @@
 package de.labystudio.spotifyapi.platform.windows.api;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.WinDef;
@@ -18,9 +20,13 @@ import java.util.Map;
  */
 public class WinProcess implements WinApi {
 
+    protected final static Gson GSON = new Gson();
+
     protected final int processId;
     protected final WinNT.HANDLE handle;
     protected final WinDef.HWND window;
+
+    protected long scanTimeout = 1000 * 10;
 
     /**
      * Creates a new instance of the {@link WinProcess} class.
@@ -39,7 +45,10 @@ public class WinProcess implements WinApi {
             throw new IllegalStateException("Process handle of " + this.processId + " not found");
         }
 
-        this.window = this.openWindow(this.processId);
+        this.window = this.openWindow(this.processId, hWnd -> {
+            String title = this.getWindowTitle(hWnd);
+            return !title.equals("Spotify Debug Window") && !title.equals("DevTools");
+        });
         if (this.getWindowTitle().isEmpty()) {
             throw new IllegalStateException("Window for process " + this.processId + " not found");
         }
@@ -112,6 +121,7 @@ public class WinProcess implements WinApi {
      * @return The address of the first matching bytes.
      */
     public long findInMemory(long minAddress, long maxAddress, byte[] searchBytes) {
+        long timeStart = System.currentTimeMillis();
         int chunkSize = 1024 * 64;
 
         for (long cursor = minAddress; cursor < maxAddress; cursor += chunkSize) {
@@ -128,6 +138,11 @@ public class WinProcess implements WinApi {
                 if (found) {
                     return cursor + i;
                 }
+            }
+
+            long timePassed = System.currentTimeMillis() - timeStart;
+            if (timePassed > this.scanTimeout) {
+                throw new IllegalStateException("Scan timeout of " + this.scanTimeout + "ms reached at address " + cursor);
             }
         }
         return -1;
@@ -195,6 +210,23 @@ public class WinProcess implements WinApi {
     }
 
     /**
+     * Check if one of the given bytes are at the given address.
+     *
+     * @param address       The address to check.
+     * @param chunksOfBytes The chunks of bytes to check.
+     * @return True if one of the bytes are at the given address.
+     */
+    public boolean hasBytes(long address, byte[]... chunksOfBytes) {
+        for (byte[] bytes : chunksOfBytes) {
+            if (this.hasBytes(address, bytes)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
      * Check if the given text is at the given address.
      *
      * @param address The address to check.
@@ -203,6 +235,22 @@ public class WinProcess implements WinApi {
      */
     public boolean hasText(long address, String text) {
         return this.hasBytes(address, text.getBytes());
+    }
+
+    /**
+     * Check if one of the given text is at the given address.
+     *
+     * @param address The address to check.
+     * @param texts   The texts to check.
+     * @return True if one of the text is at the given address.
+     */
+    public boolean hasText(long address, String... texts) {
+        for (String text : texts) {
+            if (this.hasText(address, text)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -243,7 +291,7 @@ public class WinProcess implements WinApi {
      * @return The address of the text at the given index
      */
     public long findAddressOfText(long start, String text, SearchCondition condition) {
-        return this.findAddressOfText(start, Integer.MAX_VALUE, text, condition);
+        return this.findAddressOfText(start, Long.MAX_VALUE, text, condition);
     }
 
     /**
@@ -294,6 +342,37 @@ public class WinProcess implements WinApi {
             }
         }
         return cursor;
+    }
+
+    public JsonObject readJsonObject(long address) {
+        int depth = 0;
+        boolean inString = false;
+        int chunkSize = 1024;
+
+        long offset = 0;
+        StringBuilder json = new StringBuilder();
+        do {
+            String chunk = this.readString(address + offset, chunkSize);
+            for (int i = 0; i < chunk.length(); i++) {
+                char c = chunk.charAt(i);
+                if (c == '"') {
+                    inString = !inString;
+                }
+                if (!inString) {
+                    if (c == '{' || c == '[') {
+                        depth++;
+                    } else if (c == '}' || c == ']') {
+                        depth--;
+                    }
+                }
+                json.append(c);
+                if (depth == 0) {
+                    break;
+                }
+            }
+            offset += chunkSize;
+        } while (depth > 0);
+        return GSON.fromJson(json.toString(), JsonObject.class);
     }
 
     /**
@@ -371,6 +450,16 @@ public class WinProcess implements WinApi {
      */
     public WinNT.HANDLE getHandle() {
         return this.handle;
+    }
+
+    /**
+     * Set the timeout for the memory scan in milliseconds.
+     * It will throw an exception if the timeout is reached.
+     *
+     * @param scanTimeout The timeout in milliseconds.
+     */
+    public void setScanTimeout(long scanTimeout) {
+        this.scanTimeout = scanTimeout;
     }
 
     /**

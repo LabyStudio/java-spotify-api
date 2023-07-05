@@ -1,7 +1,5 @@
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
-import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
-import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyTitle;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -9,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 public class SpotifyProcessTest {
-
-    private static final byte[] PREFIX_CONTEXT = new byte[]{0x63, 0x6F, 0x6E, 0x74, 0x65, 0x78, 0x74};
 
     public static void main(String[] args) {
         WinProcess process = new WinProcess("Spotify.exe");
@@ -20,34 +16,15 @@ public class SpotifyProcessTest {
         long addressTrackId = process.findAddressOfText(moduleInfo.getBaseOfDll(), "spotify:track:", 0);
         System.out.println("Track Id Address: 0x" + Long.toHexString(addressTrackId));
 
-        boolean isPlaying = process.getWindowTitle().contains(SpotifyTitle.DELIMITER);
-        long addressPlayBack = process.findInMemory(
-                0,
-                addressTrackId,
-                PREFIX_CONTEXT,
-                (address, index) -> {
-                    PlaybackAccessor accessor = new PlaybackAccessor(process, address);
-                    boolean valid = accessor.isValid() && accessor.isPlaying() == isPlaying; // Check if address is valid
+        long addressOfPlayback = process.findAddressOfText(0, "playlist", (address, index) -> {
+            return process.readString(address + 128, 12).equals("your_library")
+                    && process.readString(address + 408, 7).equals("context");
+        });
 
-                    // If valid then pull the data again and check if it is still valid
-                    if (valid) {
-                        accessor.update();
-                        return accessor.isValid();
-                    }
-
-                    return false;
-                }
-        );
-        if (addressPlayBack == -1) {
-            System.out.println("Could not find playback address");
-            return;
-        }
-        System.out.println("Playback Address: 0x" + Long.toHexString(addressPlayBack));
-
-        printModules(process, addressPlayBack);
+        System.out.println("Playback Address: 0x" + Long.toHexString(addressOfPlayback));
     }
 
-    public static void printModules(WinProcess process, long addressPlayBack) {
+    public static void printModules(WinProcess process, long targetAddress) {
         List<Module> modules = new ArrayList<>();
         for (Map.Entry<String, Psapi.ModuleInfo> entry : process.getModules().entrySet()) {
             modules.add(new Module(entry.getKey(), entry.getValue().getBaseOfDll()));
@@ -57,9 +34,9 @@ public class SpotifyProcessTest {
         int passed = 0;
         for (Module entry : modules) {
             long entryPoint = entry.address;
-            if (entryPoint > addressPlayBack) {
+            if (entryPoint > targetAddress) {
                 if (passed == 0) {
-                    System.out.println(Long.toHexString(addressPlayBack) + " CONTEXT ------------------------");
+                    System.out.println(Long.toHexString(targetAddress) + " <-TARGET ------------------------");
                 }
                 passed++;
                 if (passed > 1) {
