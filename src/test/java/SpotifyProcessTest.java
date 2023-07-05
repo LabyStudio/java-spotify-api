@@ -16,9 +16,10 @@ public class SpotifyProcessTest {
         long addressTrackId = process.findAddressOfText(moduleInfo.getBaseOfDll(), "spotify:track:", 0);
         System.out.println("Track Id Address: 0x" + Long.toHexString(addressTrackId));
 
-        long addressOfPlayback = process.findAddressOfText(0, "playlist", (address, index) -> {
-            return process.readString(address + 128, 12).equals("your_library")
-                    && process.readString(address + 408, 7).equals("context");
+        long addressOfPlayback = process.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
+            return process.hasText(address + 408, "context", "autoplay");
+
+            // process.hasText(address + 128, "your_library", "home")
         });
 
         System.out.println("Playback Address: 0x" + Long.toHexString(addressOfPlayback));

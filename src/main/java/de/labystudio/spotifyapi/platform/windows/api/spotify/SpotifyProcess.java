@@ -64,8 +64,7 @@ public class SpotifyProcess extends WinProcess {
 
         // Find addresses of playback states
         this.addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
-            return this.hasText(address + 128, "your_library", "home")
-                    && this.hasText(address + 408, "context", "autoplay");
+            return this.hasText(address + 408, "context", "autoplay");
         });
         if (this.addressPlayBack == -1) {
             throw new IllegalStateException("Could not find playback in memory");
