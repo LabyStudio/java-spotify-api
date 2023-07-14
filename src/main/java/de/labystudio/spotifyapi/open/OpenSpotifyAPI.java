@@ -39,10 +39,6 @@ public class OpenSpotifyAPI {
 
     private AccessTokenResponse accessTokenResponse;
 
-    public OpenSpotifyAPI() {
-        this.generateAccessTokenAsync(accessTokenResponse -> this.accessTokenResponse = accessTokenResponse);
-    }
-
     /**
      * Generate an access token asynchronously for the open spotify api
      */
@@ -262,6 +258,11 @@ public class OpenSpotifyAPI {
      * @throws IOException if the request failed
      */
     public <T> T request(String url, Class<?> clazz, boolean canGenerateNewAccessToken) throws IOException {
+        // Generate access token if not present
+        if (this.accessTokenResponse == null) {
+            this.accessTokenResponse = this.generateAccessToken();
+        }
+
         // Connect
         HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
         connection.addRequestProperty("User-Agent", USER_AGENT);
@@ -269,6 +270,7 @@ public class OpenSpotifyAPI {
         connection.addRequestProperty("app-platform", "WebPlayer");
         connection.addRequestProperty("origin", "https://open.spotify.com");
 
+        // Add access token
         if (this.accessTokenResponse != null) {
             connection.addRequestProperty("authorization", "Bearer " + this.accessTokenResponse.accessToken);
         }
@@ -290,8 +292,8 @@ public class OpenSpotifyAPI {
 
         // Read response
         JsonReader reader = new JsonReader(new InputStreamReader(
-            connection.getInputStream(),
-            StandardCharsets.UTF_8
+                connection.getInputStream(),
+                StandardCharsets.UTF_8
         ));
 
         return GSON.fromJson(reader, clazz);

@@ -2,7 +2,9 @@ package de.labystudio.spotifyapi.platform.windows.api.spotify;
 
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
+import de.labystudio.spotifyapi.platform.windows.api.playback.MemoryPlaybackAccessor;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
+import de.labystudio.spotifyapi.platform.windows.api.playback.PseudoPlaybackAccessor;
 
 /**
  * This class represents the Spotify Windows application.
@@ -18,8 +20,6 @@ public class SpotifyProcess extends WinProcess {
     private static final long ADDRESS_OFFSET_TRACK_ID = 0x1499F0;
 
     private final long addressTrackId;
-    private final long addressPlayBack;
-
     private final PlaybackAccessor playbackAccessor;
 
     private SpotifyTitle previousTitle = SpotifyTitle.UNKNOWN;
@@ -38,7 +38,15 @@ public class SpotifyProcess extends WinProcess {
         }
 
         long timeScanStart = System.currentTimeMillis();
+        this.addressTrackId = this.findTrackIdAddress();
+        this.playbackAccessor = this.findPlaybackAccessor();
 
+        if (DEBUG) {
+            System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
+        }
+    }
+
+    private long findTrackIdAddress() {
         Psapi.ModuleInfo chromeElfModule = this.getModuleInfo("chrome_elf.dll");
         if (chromeElfModule == null) {
             throw new IllegalStateException("Could not find chrome_elf.dll module");
@@ -46,40 +54,50 @@ public class SpotifyProcess extends WinProcess {
 
         // Find address of track id (Located in the chrome_elf.dll module)
         long chromeElfAddress = chromeElfModule.getBaseOfDll();
-        this.addressTrackId = chromeElfAddress + ADDRESS_OFFSET_TRACK_ID;
+        long addressTrackId = chromeElfAddress + ADDRESS_OFFSET_TRACK_ID;
 
-        if (this.addressTrackId == -1 || !this.isTrackIdValid(this.getTrackId())) {
+        if (addressTrackId == -1 || !this.isTrackIdValid(this.readTrackId(addressTrackId))) {
             throw new IllegalStateException("Could not find track id in memory");
         }
 
         if (DEBUG) {
             System.out.printf(
                     "Found track id address: %s (+%s) [%s%s]%n",
-                    Long.toHexString(this.addressTrackId),
-                    Long.toHexString(this.addressTrackId - chromeElfAddress),
+                    Long.toHexString(addressTrackId),
+                    Long.toHexString(addressTrackId - chromeElfAddress),
                     PREFIX_SPOTIFY_TRACK,
-                    this.getTrackId()
+                    this.readTrackId(addressTrackId)
             );
         }
+        return addressTrackId;
+    }
 
+    private PlaybackAccessor findPlaybackAccessor() {
         // Find addresses of playback states
-        this.addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
+        long addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
             return this.hasText(address + 408, "context", "autoplay");
         });
-        if (this.addressPlayBack == -1) {
-            throw new IllegalStateException("Could not find playback in memory");
+        if (addressPlayBack == -1) {
+            if (DEBUG) {
+                System.out.println("Could not find playback address in memory");
+            }
+            return new PseudoPlaybackAccessor(this);
         }
 
         // Create the playback accessor with the found address
-        this.playbackAccessor = new PlaybackAccessor(this, this.addressPlayBack);
-        if (!this.playbackAccessor.isValid()) {
-            throw new IllegalStateException("Could not create playback accessor");
+        MemoryPlaybackAccessor playbackAccessor = new MemoryPlaybackAccessor(this, addressPlayBack);
+        if (!playbackAccessor.isValid()) {
+            if (DEBUG) {
+                System.out.println("Found playback address is not valid");
+            }
+            return new PseudoPlaybackAccessor(this);
         }
 
         if (DEBUG) {
-            System.out.println("Found playback address at: " + Long.toHexString(this.addressPlayBack));
-            System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
+            System.out.println("Found playback address at: " + Long.toHexString(addressPlayBack));
         }
+
+        return playbackAccessor;
     }
 
     /**
@@ -132,10 +150,6 @@ public class SpotifyProcess extends WinProcess {
 
     public long getAddressTrackId() {
         return this.addressTrackId;
-    }
-
-    public long getAddressPlayBack() {
-        return this.addressPlayBack;
     }
 
     /**

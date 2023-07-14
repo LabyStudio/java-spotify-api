@@ -309,6 +309,26 @@ public class WinProcess implements WinApi {
     }
 
     /**
+     * Find the address of multiple text strings inside the memory.
+     * If there are multiple matches of the text, the given index will be used to select the correct one.
+     *
+     * @param start     The address to start searching from.
+     * @param end       The address to stop searching at.
+     * @param condition The condition function to call for each matching address.
+     * @param texts     The texts to search for.
+     * @return The address of the text at the given index
+     */
+    public long findAddressOfTexts(long start, long end, SearchCondition condition, String... texts) {
+        for (String text : texts) {
+            long address = this.findAddressOfText(start, end, text, condition);
+            if (address != -1) {
+                return address;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Find multiple strings inside the memory.
      * It will start searching with the first string and continue with the next at the position where the previous was found.
      *

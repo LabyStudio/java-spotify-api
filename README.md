@@ -99,7 +99,7 @@ api.initialize();
 
 Fetch an image of the current playing track:
 ```java
-// Create an instance of the Open Spotify API
+// Create an instance of the Open Spotify API (Or use SpotifyAPI#getOpenAPI)
 OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI();
 
 // Download the cover art of the current song

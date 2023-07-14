@@ -3,6 +3,7 @@ package de.labystudio.spotifyapi.platform;
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.config.SpotifyConfiguration;
+import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +22,8 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
      * The list of all Spotify listeners.
      */
     protected final List<SpotifyListener> listeners = new ArrayList<>();
+
+    private OpenSpotifyAPI openAPI;
 
     private SpotifyConfiguration configuration;
 
@@ -98,6 +101,14 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
     @Override
     public SpotifyConfiguration getConfiguration() {
         return this.configuration;
+    }
+
+    @Override
+    public final OpenSpotifyAPI getOpenAPI() {
+        if (this.openAPI == null) {
+            this.openAPI = new OpenSpotifyAPI();
+        }
+        return this.openAPI;
     }
 
     @Override

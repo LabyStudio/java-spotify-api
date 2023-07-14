@@ -3,6 +3,7 @@ package de.labystudio.spotifyapi.platform.windows;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
+import de.labystudio.spotifyapi.open.model.track.OpenTrack;
 import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import de.labystudio.spotifyapi.platform.windows.api.WinApi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
@@ -31,7 +32,6 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private long lastAccessorPosition = -1;
     private long lastTimeSynced;
 
-
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
@@ -49,7 +49,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         String trackId = this.process.getTrackId();
 
         // Update playback status and check if it is valid
-        if (!playback.update() || !this.process.isTrackIdValid(trackId)) {
+        if (!this.process.isTrackIdValid(trackId) || !playback.update()) {
             this.positionKnown = false;
             this.currentPosition = -1;
             throw new IllegalStateException("Could not update playback");
@@ -69,6 +69,18 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
                 int trackLength = playback.getLength();
                 boolean isFirstTrack = !this.hasTrack();
 
+                // Request track length from open API if not available
+                if (!playback.hasTrackLength()) {
+                    try {
+                        OpenTrack openTrack = this.getOpenAPI().requestOpenTrack(trackId);
+                        if (openTrack != null) {
+                            trackLength = openTrack.durationMs;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
                 this.currentTrack = track;
 
@@ -87,13 +99,19 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
+            // Forget position if the song is paused and the position is unknown
+            if (!playback.hasTrackPosition()) {
+                this.positionKnown = false;
+                this.currentPosition = -1;
+            }
+
             // Fire on play back changed
             this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
         }
 
         // Handle position changes
         int position = playback.getPosition();
-        if (position != this.lastAccessorPosition) {
+        if (playback.hasTrackPosition() && position != this.lastAccessorPosition) {
             this.lastAccessorPosition = position;
             this.updatePosition(position, false);
         }

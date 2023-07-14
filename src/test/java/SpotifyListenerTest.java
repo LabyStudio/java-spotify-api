@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 public class SpotifyListenerTest {
 
     public static void main(String[] args) {
-        OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI();
         SpotifyAPI api = SpotifyAPIFactory.create();
+        OpenSpotifyAPI openSpotifyAPI = api.getOpenAPI();
         api.registerListener(new SpotifyListener() {
             @Override
             public void onConnect() {
