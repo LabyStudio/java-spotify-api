@@ -54,16 +54,15 @@ public class SpotifyProcess extends WinProcess {
 
         // Find address of track id (Located in the chrome_elf.dll module)
         long chromeElfAddress = chromeElfModule.getBaseOfDll();
+
+        if(this.findInMemory(0, 0x0FFFFFFF, "Scoop Apps".getBytes()) != -1) {
+            ADDRESS_OFFSET_TRACK_ID = 0xFEFE8;
+        }
+
         long addressTrackId = chromeElfAddress + ADDRESS_OFFSET_TRACK_ID;
 
         if (addressTrackId == -1 || !this.isTrackIdValid(this.readTrackId(addressTrackId))) {
-            if(ADDRESS_OFFSET_TRACK_ID == 0x1499F0) {
-                ADDRESS_OFFSET_TRACK_ID = 0xFEFE8;
-                throw new IllegalStateException("Could not find track id in memory, trying different Address Offset");
-            } else {
-                ADDRESS_OFFSET_TRACK_ID = 0x1499F0;
-                throw new IllegalStateException("Could not find track id in memory");
-            }
+            throw new IllegalStateException("Could not find track id in memory");
         }
 
         if (DEBUG) {
