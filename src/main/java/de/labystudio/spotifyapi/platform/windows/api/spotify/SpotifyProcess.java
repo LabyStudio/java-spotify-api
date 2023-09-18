@@ -18,8 +18,10 @@ public class SpotifyProcess extends WinProcess {
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
-            0x1499F0, // Vanilla
-            0xFEFE8 // Scoop
+            0x14C9F0, // 64-Bit
+            0x102178, // 32-Bit
+            0x1499F0, // 64-Bit (Old)
+            0xFEFE8 // 32-Bit (Old)
     };
 
     private final long addressTrackId;
@@ -62,10 +64,14 @@ public class SpotifyProcess extends WinProcess {
         long addressTrackId = -1;
         for (long trackIdOffset : OFFSETS_TRACK_ID) {
             addressTrackId = chromeElfAddress + trackIdOffset;
-            if (addressTrackId == -1 || !this.isTrackIdValid(this.readTrackId(addressTrackId))) {
-                throw new IllegalStateException("Could not find track id in memory");
+            if (addressTrackId != -1 && this.isTrackIdValid(this.readTrackId(addressTrackId))) {
+                // If the offset works, exit the loop
+                break;
             }
-            break;
+        }
+
+        if (addressTrackId == -1) {
+            throw new IllegalStateException("Could not find track id in memory");
         }
 
         if (DEBUG) {
