@@ -29,10 +29,10 @@ public class MemoryPlaybackAccessor implements PlaybackAccessor {
         this.process = process;
 
         // Create pointer registry to calculate the absolute addresses using the relative offsets
-        this.pointerRegistry = new PointerRegistry(0x0CFF4498, address);
-        this.pointerRegistry.register("position", 0x0CFF4810);
-        this.pointerRegistry.register("length", 0x0CFF4820);
-        this.pointerRegistry.register("is_playing", 0x0CFF4850); // 1=true, 0=false
+        this.pointerRegistry = new PointerRegistry(0x0AD59F08, address);
+        this.pointerRegistry.register("position", 0x0AD5A290);
+        this.pointerRegistry.register("length", 0x0AD5A2A0);
+        this.pointerRegistry.register("is_playing", 0x0AD5A2D8); // 1=true, 0=false
 
         this.update();
     }
