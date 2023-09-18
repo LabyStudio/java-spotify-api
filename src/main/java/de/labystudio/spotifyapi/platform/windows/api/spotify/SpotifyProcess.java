@@ -19,7 +19,9 @@ public class SpotifyProcess extends WinProcess {
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
             0x14C9F0, // 64-Bit
-            0x102178 // 32-Bit
+            0x102178, // 32-Bit
+            0x1499F0, // 64-Bit (Old)
+            0xFEFE8 // 32-Bit (Old)
     };
 
     private final long addressTrackId;
@@ -72,7 +74,7 @@ public class SpotifyProcess extends WinProcess {
             throw new IllegalStateException("Could not find track id in memory");
         }
 
-    if (DEBUG) {
+        if (DEBUG) {
             System.out.printf(
                     "Found track id address: %s (+%s) [%s%s]%n",
                     Long.toHexString(addressTrackId),
