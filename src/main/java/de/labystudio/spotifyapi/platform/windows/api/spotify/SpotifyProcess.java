@@ -176,9 +176,8 @@ public class SpotifyProcess extends WinProcess {
      * @return True if the track ID is valid, false otherwise.
      */
     public boolean isTrackIdValid(String trackId) {
-        char[] charArray = trackId.toCharArray();
-        for (char c : charArray) {
-            if (Character.isLetterOrDigit(c) && c == 0) {
+        for (char c : trackId.toCharArray()) {
+            if (!Character.isLetterOrDigit(c)) {
                 return false;
             }
         }
