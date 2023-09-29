@@ -18,7 +18,7 @@ public class SpotifyProcess extends WinProcess {
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
-            0x14FA30, // 64-Bit (latest)
+            0x14FA30, // 64-Bit (1.2.21.1104.g42cf0a50)
             0x106198, // 32-Bit (1.2.21.1104.g42cf0a50)
             0x14C9F0, // 64-Bit (Old)
             0x102178, // 32-Bit (Old)
@@ -66,7 +66,6 @@ public class SpotifyProcess extends WinProcess {
         long addressTrackId = -1;
         for (long trackIdOffset : OFFSETS_TRACK_ID) {
             addressTrackId = chromeElfAddress + trackIdOffset;
-            System.out.println(this.isTrackIdValid(this.readTrackId(addressTrackId)));
             if (addressTrackId != -1 && this.isTrackIdValid(this.readTrackId(addressTrackId))) {
                 // If the offset works, exit the loop
                 break;
