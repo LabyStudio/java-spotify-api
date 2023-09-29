@@ -1,5 +1,6 @@
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
+import de.labystudio.spotifyapi.platform.windows.api.playback.MemoryPlaybackAccessor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,12 +18,22 @@ public class SpotifyProcessTest {
         System.out.println("Track Id Address: 0x" + Long.toHexString(addressTrackId));
 
         long addressOfPlayback = process.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
-            return process.hasText(address + 408, "context", "autoplay");
-
-            // process.hasText(address + 128, "your_library", "home")
+            return process.hasText(address + 408, "context", "autoplay")
+                    && process.hasText(address + 128, "your_library", "home")
+                    && new MemoryPlaybackAccessor(process, address).isValid();
         });
 
-        System.out.println("Playback Address: 0x" + Long.toHexString(addressOfPlayback));
+        if (addressOfPlayback == -1) {
+            addressOfPlayback = process.findAddressOfText(0, 0x0FFFFFFF, "album", (address, index) -> {
+                return process.hasText(address + 408, "context", "autoplay")
+                        && process.hasText(address + 128, "your_library", "home")
+                        && new MemoryPlaybackAccessor(process, address).isValid();
+            });
+        }
+
+        MemoryPlaybackAccessor accessor = new MemoryPlaybackAccessor(process, addressOfPlayback);
+        System.out.println("Playback Address: 0x" + Long.toHexString(addressOfPlayback) + " (" + (accessor.isValid() ? "valid" : "invalid") + ")");
+        System.out.println("Position: " + accessor.getPosition());
     }
 
     public static void printModules(WinProcess process, long targetAddress) {

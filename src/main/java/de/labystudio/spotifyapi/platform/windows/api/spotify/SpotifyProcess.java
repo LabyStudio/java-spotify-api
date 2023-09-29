@@ -62,14 +62,36 @@ public class SpotifyProcess extends WinProcess {
         // Find address of track id (Located in the chrome_elf.dll module)
         long chromeElfAddress = chromeElfModule.getBaseOfDll();
 
-        // Check all offsets for valid track id
+        // Check all hardcoded offsets for valid track id
         long addressTrackId = -1;
+        long minTrackIdOffset = Long.MAX_VALUE;
+        long maxTrackIdOffset = Long.MIN_VALUE;
         for (long trackIdOffset : OFFSETS_TRACK_ID) {
-            addressTrackId = chromeElfAddress + trackIdOffset;
-            if (addressTrackId != -1 && this.isTrackIdValid(this.readTrackId(addressTrackId))) {
+            // Get min and max of hardcoded offset
+            minTrackIdOffset = Math.min(minTrackIdOffset, trackIdOffset);
+            maxTrackIdOffset = Math.max(maxTrackIdOffset, trackIdOffset);
+
+            // Check if the hardcoded offset is valid
+            long targetAddressTrackId = chromeElfAddress + trackIdOffset;
+            if (this.isTrackIdValid(this.readTrackId(targetAddressTrackId))) {
                 // If the offset works, exit the loop
+                addressTrackId = targetAddressTrackId;
                 break;
             }
+        }
+
+        // If the hardcoded offsets are not valid, try to find it dynamically
+        if (addressTrackId == -1) {
+            if (DEBUG) {
+                System.out.println("Could not find track id with hardcoded offsets. Trying to find it dynamically...");
+            }
+
+            long threshold = (maxTrackIdOffset - minTrackIdOffset) * 3;
+            long scanAddressFrom = chromeElfAddress + minTrackIdOffset - threshold;
+            long scanAddressTo = chromeElfAddress + maxTrackIdOffset + threshold;
+            addressTrackId = this.findAddressOfText(scanAddressFrom, scanAddressTo, "spotify:track:", (address, index) -> {
+                return this.isTrackIdValid(this.readTrackId(address));
+            });
         }
 
         if (addressTrackId == -1) {
@@ -89,10 +111,22 @@ public class SpotifyProcess extends WinProcess {
     }
 
     private PlaybackAccessor findPlaybackAccessor() {
-        // Find addresses of playback states
+        // Find addresses of playback states when playing a playlist
         long addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
-            return this.hasText(address + 408, "context", "autoplay");
+            return this.hasText(address + 408, "context", "autoplay")
+                    && this.hasText(address + 128, "your_library", "home")
+                    && new MemoryPlaybackAccessor(this, address).isValid();
         });
+
+        if (addressPlayBack == -1) {
+            // Find addresses of playback states when playing an album
+            addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "album", (address, index) -> {
+                return this.hasText(address + 408, "context", "autoplay")
+                        && this.hasText(address + 128, "your_library", "home")
+                        && new MemoryPlaybackAccessor(this, address).isValid();
+            });
+        }
+
         if (addressPlayBack == -1) {
             if (DEBUG) {
                 System.out.println("Could not find playback address in memory");
@@ -177,7 +211,7 @@ public class SpotifyProcess extends WinProcess {
      */
     public boolean isTrackIdValid(String trackId) {
         for (char c : trackId.toCharArray()) {
-            if (!isValidCharacter(c)) {
+            if (!this.isValidCharacter(c)) {
                 return false;
             }
         }
