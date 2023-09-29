@@ -18,8 +18,10 @@ public class SpotifyProcess extends WinProcess {
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
-            0x14C9F0, // 64-Bit
-            0x102178, // 32-Bit
+            0x14FA30, // 64-Bit (1.2.21.1104.g42cf0a50)
+            0x106198, // 32-Bit (1.2.21.1104.g42cf0a50)
+            0x14C9F0, // 64-Bit (Old)
+            0x102178, // 32-Bit (Old)
             0x1499F0, // 64-Bit (Old)
             0xFEFE8 // 32-Bit (Old)
     };
@@ -175,10 +177,15 @@ public class SpotifyProcess extends WinProcess {
      */
     public boolean isTrackIdValid(String trackId) {
         for (char c : trackId.toCharArray()) {
-            if (c == 0) {
+            if (!isValidCharacter(c)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean isValidCharacter(char c) {
+        // Check if the character is within a valid range
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
     }
 }
