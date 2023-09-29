@@ -62,7 +62,7 @@ public class SpotifyProcess extends WinProcess {
         // Find address of track id (Located in the chrome_elf.dll module)
         long chromeElfAddress = chromeElfModule.getBaseOfDll();
 
-        // Check all hardcoded offsets for valid track id
+        // Check all offsets for valid track id
         long addressTrackId = -1;
         long minTrackIdOffset = Long.MAX_VALUE;
         long maxTrackIdOffset = Long.MIN_VALUE;
@@ -211,15 +211,10 @@ public class SpotifyProcess extends WinProcess {
      */
     public boolean isTrackIdValid(String trackId) {
         for (char c : trackId.toCharArray()) {
-            if (!this.isValidCharacter(c)) {
+            if (!Character.isLetterOrDigit(c)) {
                 return false;
             }
         }
         return true;
-    }
-
-    private boolean isValidCharacter(char c) {
-        // Check if the character is within a valid range
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
     }
 }
