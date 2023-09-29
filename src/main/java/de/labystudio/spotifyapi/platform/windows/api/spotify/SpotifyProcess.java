@@ -89,7 +89,7 @@ public class SpotifyProcess extends WinProcess {
             long threshold = (maxTrackIdOffset - minTrackIdOffset) * 3;
             long scanAddressFrom = chromeElfAddress + minTrackIdOffset - threshold;
             long scanAddressTo = chromeElfAddress + maxTrackIdOffset + threshold;
-            addressTrackId = this.findAddressOfText(scanAddressFrom, scanAddressTo, "spotify:track:", (address, index) -> {
+            addressTrackId = this.findAddressOfText(scanAddressFrom, scanAddressTo, PREFIX_SPOTIFY_TRACK, (address, index) -> {
                 return this.isTrackIdValid(this.readTrackId(address));
             });
         }
