@@ -18,8 +18,10 @@ public class SpotifyProcess extends WinProcess {
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
-            0x14C9F0, // 64-Bit
-            0x102178, // 32-Bit
+            0x14FA30, // 64-Bit (latest)
+            0x106198, // 32-Bit (latest)
+            0x14C9F0, // 64-Bit (Old)
+            0x102178, // 32-Bit (Old)
             0x1499F0, // 64-Bit (Old)
             0xFEFE8 // 32-Bit (Old)
     };
