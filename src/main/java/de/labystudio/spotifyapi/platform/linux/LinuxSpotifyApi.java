@@ -89,7 +89,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle position changes
-        int position = (int) (Math.floor(Float.parseFloat(executeShellCommand(baseCommand+"position")))*1000);
+        int position = (int) (Float.parseFloat(executeShellCommand(baseCommand+"position"))) * 1000;
         if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
             this.updatePosition(position);
         }
