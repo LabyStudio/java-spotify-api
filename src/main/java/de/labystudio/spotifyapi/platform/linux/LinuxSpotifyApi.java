@@ -63,7 +63,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
             String trackName = executeShellCommand(baseCommand+"metadata xesam:title");
             String trackArtist = executeShellCommand(baseCommand+"metadata xesam:artist");
-            int trackLength = Integer.parseInt(executeShellCommand(baseCommand+"metadata mpris:length"));
+            int trackLength = Integer.parseInt(executeShellCommand(baseCommand+"metadata mpris:length"))/1000;
 
             boolean isFirstTrack = !this.hasTrack();
 
@@ -89,7 +89,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle position changes
-        int position = Integer.parseInt(executeShellCommand(baseCommand+"position"));
+        int position = (int) (Math.floor(Float.parseFloat(executeShellCommand(baseCommand+"position")))*1000);
         if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
             this.updatePosition(position);
         }
