@@ -88,11 +88,8 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
             this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
         }
 
-        // Handle position changes
-        int position = (int) (Float.parseFloat(executeShellCommand(baseCommand+"position"))) * 1000;
-        if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
-            this.updatePosition(position);
-        }
+
+        this.updatePosition((int) (Float.parseFloat(executeShellCommand(baseCommand+"position"))) * 1000);
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
