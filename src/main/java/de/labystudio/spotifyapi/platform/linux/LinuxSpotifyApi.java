@@ -51,7 +51,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     @Override
     protected void onTick() {
-        String trackId = executeShellCommand(baseCommand+"metadata mpris:trackid");
+        String trackId = executeShellCommand(baseCommand+"metadata mpris:trackid").split("/")[4];
 
         // Handle on connect
         if (!this.connected && !trackId.isEmpty()) {
