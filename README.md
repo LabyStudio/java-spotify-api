@@ -15,6 +15,7 @@ because the API reads the information directly from the application itself.
 #### Supported operating systems:
 - Windows
 - macOS
+- Linux distros that uses systemd
 
 ## Gradle Setup
 ```groovy

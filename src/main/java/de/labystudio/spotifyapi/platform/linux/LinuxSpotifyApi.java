@@ -16,7 +16,7 @@ import static de.labystudio.spotifyapi.platform.linux.api.MetadataParser.*;
 
 /**
  * Linux implementation of the SpotifyAPI.
- * It uses the playerctl to access the Spotify's media control and metadata.
+ * It uses the MPRIS to access the Spotify's media control and metadata.
  *
  * @author holybaechu
  * Thanks for LabyStudio for many code snippets.
