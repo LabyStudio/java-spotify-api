@@ -8,7 +8,11 @@ import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Objects;
+
+import static de.labystudio.spotifyapi.platform.linux.api.MetadataParser.*;
 
 /**
  * Linux implementation of the SpotifyAPI.
@@ -37,21 +41,22 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = reader.readLine()) != null) {
-                output.append(line);
+                output.append(line + "\n");
             }
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
-        return output.toString();
+        return output.toString().substring(output.toString().indexOf('\n')+1);
     }
-
-    String baseCommand = "playerctl -p spotify ";
 
     @Override
     protected void onTick() {
-        String trackId = executeShellCommand(baseCommand+"metadata mpris:trackid").split("/")[4];
+        String commandResult = executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
+        Map<String, Object> metadata = parse(commandResult);
+
+        String trackId = ((String) metadata.get("mpris:trackid")).split("/")[4];
 
         // Handle on connect
         if (!this.connected && !trackId.isEmpty()) {
@@ -61,9 +66,9 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
         // Handle track changes
         if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-            String trackName = executeShellCommand(baseCommand+"metadata xesam:title");
-            String trackArtist = executeShellCommand(baseCommand+"metadata xesam:artist");
-            int trackLength = Integer.parseInt(executeShellCommand(baseCommand+"metadata mpris:length"))/1000;
+            String trackName = metadata.get("xesam:title").toString();
+            String trackArtist = String.join(", ", (ArrayList) metadata.get("xesam:artist"));
+            int trackLength = Integer.parseInt(String.valueOf(metadata.get("mpris:length"))) / 1000;
 
             boolean isFirstTrack = !this.hasTrack();
 
@@ -80,7 +85,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle is playing changes
-        boolean isPlaying = executeShellCommand(baseCommand+"status").equals("Playing");
+        boolean isPlaying = parseValueFromString(executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'PlaybackStatus'").trim().replaceFirst("variant       ", "")).equals("Playing");
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -89,7 +94,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
 
-        this.updatePosition((int) Math.floor(Float.parseFloat(executeShellCommand(baseCommand+"position"))) * 1000);
+        this.updatePosition((int) Math.floor(Float.parseFloat((String) parseValueFromString(executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Position'").trim().replaceFirst("variant       ", "")))) / 1000);
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
@@ -119,13 +124,13 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         try {
             switch (mediaKey) {
                 case PLAY_PAUSE:
-                    executeShellCommand("playerctl -p spotify play-pause");
+                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.PlayPause");
                     break;
                 case NEXT:
-                    executeShellCommand("playerctl -p spotify next");
+                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next");
                     break;
                 case PREV:
-                    executeShellCommand("playerctl -p spotify previous");
+                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous");
                     break;
             }
         } catch (Exception e) {
