@@ -30,7 +30,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     private long lastTimePositionUpdated;
 
-    private String baseCommand = "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/Media1Player2 ";
+    private String baseCommand = "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 ";
 
     public static String executeShellCommand(String command) {
         StringBuilder output = new StringBuilder();
@@ -57,6 +57,8 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
     protected void onTick() {
         String commandResult = executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
         Map<String, Object> metadata = parse(commandResult);
+
+        System.out.println(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
 
         String trackId = ((String) metadata.get("mpris:trackid")).split("/")[4];
 
