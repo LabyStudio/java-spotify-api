@@ -212,7 +212,10 @@ public class SpotifyProcess extends WinProcess {
      */
     public boolean isTrackIdValid(String trackId) {
         for (char c : trackId.toCharArray()) {
-            if (!Character.isLetterOrDigit(c)) {
+            boolean isValidCharacter = c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9';
+            if (!isValidCharacter) {
                 return false;
             }
         }
