@@ -4,15 +4,9 @@ import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
+import de.labystudio.spotifyapi.platform.linux.api.MPRISCommunicator;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Map;
 import java.util.Objects;
-
-import static de.labystudio.spotifyapi.platform.linux.api.MetadataParser.*;
 
 /**
  * Linux implementation of the SpotifyAPI.
@@ -30,35 +24,11 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     private long lastTimePositionUpdated;
 
-    private final String baseCommand = "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 ";
-
-    public static String executeShellCommand(String command) {
-        StringBuilder output = new StringBuilder();
-
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder("bash", "-c", command);
-            Process process = processBuilder.start();
-            process.waitFor();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        return output.substring(output.toString().indexOf('\n')+1);
-    }
+    private MPRISCommunicator MPRISCommunicator = new MPRISCommunicator();
 
     @Override
     protected void onTick() {
-        String commandResult = executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
-        Map<String, Object> metadata = parse(commandResult);
-
-        String trackId = ((String) metadata.get("mpris:trackid")).split("/")[4];
+        String trackId = MPRISCommunicator.getTrackId();
 
         // Handle on connect
         if (!this.connected && !trackId.isEmpty()) {
@@ -68,9 +38,9 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
         // Handle track changes
         if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-            String trackName = metadata.get("xesam:title").toString();
-            String trackArtist = String.join(", ", (ArrayList) metadata.get("xesam:artist"));
-            int trackLength = Integer.parseInt(String.valueOf(metadata.get("mpris:length"))) / 1000;
+            String trackName = MPRISCommunicator.getTrackName();
+            String trackArtist = MPRISCommunicator.getArtist();
+            int trackLength = MPRISCommunicator.getTrackLength();
 
             boolean isFirstTrack = !this.hasTrack();
 
@@ -87,7 +57,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle is playing changes
-        boolean isPlaying = parseValueFromString(executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'PlaybackStatus'").trim().replaceFirst("variant {7}", "")).equals("Playing");
+        boolean isPlaying = MPRISCommunicator.isPlaying();
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -96,7 +66,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
 
-        this.updatePosition((int) Math.floor(Float.parseFloat((String) parseValueFromString(executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Position'").trim().replaceFirst("variant {7}", "")))) / 1000);
+        this.updatePosition(MPRISCommunicator.getPosition());
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
@@ -126,13 +96,13 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         try {
             switch (mediaKey) {
                 case PLAY_PAUSE:
-                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.PlayPause");
+                    MPRISCommunicator.playPause();
                     break;
                 case NEXT:
-                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.Next");
+                    MPRISCommunicator.next();
                     break;
                 case PREV:
-                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.Previous");
+                    MPRISCommunicator.previous();
                     break;
             }
         } catch (Exception e) {
