@@ -12,7 +12,7 @@ import java.util.Objects;
  * Linux implementation of the SpotifyAPI.
  * It uses the MPRIS to access the Spotify's media control and metadata.
  *
- * @author holybaechu
+ * @author holybaechu, LabyStudio
  * Thanks for LabyStudio for many code snippets.
  */
 public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
@@ -66,8 +66,11 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
             this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
         }
 
-
-        this.updatePosition(this.mediaPlayer.getPosition());
+        // Handle position changes
+        int position = this.mediaPlayer.getPosition();
+        if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
+            this.updatePosition(position);
+        }
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);

@@ -51,10 +51,10 @@ public class DBusSend {
      * @return The requested information
      * @throws Exception If the request failed
      */
-    public DBusResponse get(String... keys) throws Exception {
+    public Variant get(String... keys) throws Exception {
         String[] contents = new String[keys.length];
         for (int i = 0; i < keys.length; i++) {
-            contents[i] = "string:'" + keys[i] + "'";
+            contents[i] = String.format("string:%s", keys[i]);
         }
         return this.send(INTERFACE_GET, contents);
     }
@@ -67,7 +67,7 @@ public class DBusSend {
      * @return The result of the command
      * @throws Exception If the command failed
      */
-    public DBusResponse send(InterfaceMember interfaceMember, String... contents) throws Exception {
+    public Variant send(InterfaceMember interfaceMember, String... contents) throws Exception {
         // Build arguments
         String[] arguments = new String[2 + this.parameters.length + 2 + contents.length];
         arguments[0] = "dbus-send";
@@ -88,11 +88,14 @@ public class DBusSend {
             // Read response
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             StringBuilder builder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
+            String response;
+            while ((response = reader.readLine()) != null) {
+                if (response.startsWith("method ")) {
+                    continue;
+                }
+                builder.append(response).append("\n");
             }
-            return new DBusResponse(builder.toString());
+            return Variant.parse(builder.toString());
         } else {
             // Handle error message
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
