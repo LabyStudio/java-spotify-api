@@ -38,7 +38,7 @@ public class MetadataParser {
                 String[] words = line.replaceFirst("variant {16}", "").split(splitRegex);
 
                 if (words[0].equals("array")) {
-                    arrayStartPos=i;
+                    arrayStartPos = i;
                 } else {
                     value = parseValue(words[0], words[1]);
                 }
