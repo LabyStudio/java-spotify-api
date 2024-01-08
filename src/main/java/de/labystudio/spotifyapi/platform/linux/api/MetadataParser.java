@@ -14,23 +14,23 @@ public class MetadataParser {
 
         String[] lines = input.split("\n");
 
-        int arrStartIndex = 0;
+        int arrayStartPos = 0;
         String key = "";
         Object value = new Object();
         for (int i = 1; i < lines.length-1; i++) {
             String line = lines[i].trim();
 
-            if(arrStartIndex != 0){
+            if(arrayStartPos != 0){
                 if(line.contains("]")){
-                    String arrStr = "";
-                    int j = arrStartIndex;
+                    String arrayString = "";
+                    int j = arrayStartPos;
                     for (; j < i+1; j++) {
-                        arrStr = arrStr + lines[j] + "\n";
+                        arrayString = arrayString + lines[j] + "\n";
                     }
                     i = j-1;
-                    arrStartIndex = 0;
+                    arrayStartPos = 0;
 
-                    value = parseList(arrStr);
+                    value = parseList(arrayString);
                 }else continue;
             }else if (line.startsWith("variant                ")) {
                 // Should be value of the dict entry
@@ -38,7 +38,7 @@ public class MetadataParser {
                 String[] words = line.replaceFirst("variant                ", "").split(splitRegex);
 
                 if (words[0].equals("array")) {
-                    arrStartIndex=i;
+                    arrayStartPos=i;
                 } else {
                     value = parseValue(words[0], words[1]);
                 }
@@ -60,18 +60,15 @@ public class MetadataParser {
         return result;
     }
 
-    private static List<Object> parseList(String arrString) {
+    private static List<Object> parseList(String arrayString) {
         List<Object> result = new ArrayList<>();
 
-        String[] lines = arrString.split("\n");
+        String[] lines = arrayString.split("\n");
 
         for (int i = 1; i < lines.length-1; i++) {
-            String line = lines[i].trim();
-            String[] words = line.split(splitRegex);
+            String[] words = lines[i].trim().split(splitRegex);
 
-            Object value = parseValue(words[0], words[1]);
-
-            result.add(value);
+            result.add(parseValue(words[0], words[1]));
         }
 
         return result;
@@ -92,8 +89,8 @@ public class MetadataParser {
         }
     }
 
-    public static Object parseValueFromString(String str) {
-        String[] words = str.split(splitRegex);
+    public static Object parseValueFromString(String string) {
+        String[] words = string.split(splitRegex);
 
         return parseValue(words[0], words[1]);
     }

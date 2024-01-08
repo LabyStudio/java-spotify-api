@@ -30,6 +30,8 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     private long lastTimePositionUpdated;
 
+    private String baseCommand = "dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/Media1Player2 ";
+
     public static String executeShellCommand(String command) {
         StringBuilder output = new StringBuilder();
 
@@ -53,7 +55,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     @Override
     protected void onTick() {
-        String commandResult = executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
+        String commandResult = executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Metadata'");
         Map<String, Object> metadata = parse(commandResult);
 
         String trackId = ((String) metadata.get("mpris:trackid")).split("/")[4];
@@ -85,7 +87,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle is playing changes
-        boolean isPlaying = parseValueFromString(executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'PlaybackStatus'").trim().replaceFirst("variant       ", "")).equals("Playing");
+        boolean isPlaying = parseValueFromString(executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'PlaybackStatus'").trim().replaceFirst("variant       ", "")).equals("Playing");
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -94,7 +96,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
 
-        this.updatePosition((int) Math.floor(Float.parseFloat((String) parseValueFromString(executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify   /org/mpris/MediaPlayer2 org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Position'").trim().replaceFirst("variant       ", "")))) / 1000);
+        this.updatePosition((int) Math.floor(Float.parseFloat((String) parseValueFromString(executeShellCommand(baseCommand + "org.freedesktop.DBus.Properties.Get   string:'org.mpris.MediaPlayer2.Player'   string:'Position'").trim().replaceFirst("variant       ", "")))) / 1000);
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
@@ -124,13 +126,13 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         try {
             switch (mediaKey) {
                 case PLAY_PAUSE:
-                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.PlayPause");
+                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.PlayPause");
                     break;
                 case NEXT:
-                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Next");
+                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.Next");
                     break;
                 case PREV:
-                    executeShellCommand("dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.Previous");
+                    executeShellCommand(baseCommand + "org.mpris.MediaPlayer2.Player.Previous");
                     break;
             }
         } catch (Exception e) {
