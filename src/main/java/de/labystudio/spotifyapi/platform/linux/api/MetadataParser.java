@@ -27,7 +27,7 @@ public class MetadataParser {
                     for (; j < i+1; j++) {
                         arrayString.append(lines[j]).append("\n");
                     }
-                    i = j-1;
+                    i = j - 1;
                     arrayStartPos = 0;
 
                     value = parseList(arrayString.toString());
