@@ -16,6 +16,7 @@ import java.util.Objects;
  * Thanks for LabyStudio for many code snippets.
  */
 public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
+
     private boolean connected = false;
 
     private Track currentTrack;
@@ -24,11 +25,11 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     private long lastTimePositionUpdated;
 
-    private MPRISCommunicator MPRISCommunicator = new MPRISCommunicator();
+    private final MPRISCommunicator mediaPlayer = new MPRISCommunicator();
 
     @Override
-    protected void onTick() {
-        String trackId = MPRISCommunicator.getTrackId();
+    protected void onTick() throws Exception {
+        String trackId = this.mediaPlayer.getTrackId();
 
         // Handle on connect
         if (!this.connected && !trackId.isEmpty()) {
@@ -38,9 +39,9 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
         // Handle track changes
         if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-            String trackName = MPRISCommunicator.getTrackName();
-            String trackArtist = MPRISCommunicator.getArtist();
-            int trackLength = MPRISCommunicator.getTrackLength();
+            String trackName = this.mediaPlayer.getTrackName();
+            String trackArtist = this.mediaPlayer.getArtist();
+            int trackLength = this.mediaPlayer.getTrackLength();
 
             boolean isFirstTrack = !this.hasTrack();
 
@@ -57,7 +58,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle is playing changes
-        boolean isPlaying = MPRISCommunicator.isPlaying();
+        boolean isPlaying = this.mediaPlayer.isPlaying();
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -66,7 +67,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
 
-        this.updatePosition(MPRISCommunicator.getPosition());
+        this.updatePosition(this.mediaPlayer.getPosition());
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
@@ -96,13 +97,13 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         try {
             switch (mediaKey) {
                 case PLAY_PAUSE:
-                    MPRISCommunicator.playPause();
+                    this.mediaPlayer.playPause();
                     break;
                 case NEXT:
-                    MPRISCommunicator.next();
+                    this.mediaPlayer.next();
                     break;
                 case PREV:
-                    MPRISCommunicator.previous();
+                    this.mediaPlayer.previous();
                     break;
             }
         } catch (Exception e) {
