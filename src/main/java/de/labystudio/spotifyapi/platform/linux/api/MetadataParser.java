@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class MetadataParser {
 
-    private static String splitRegex = "\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
+    private static final String splitRegex = "\\s+(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)";
 
     public static Map<String, Object> parse(String input) {
         Map<String, Object> result = new HashMap<>();
@@ -22,20 +22,20 @@ public class MetadataParser {
 
             if(arrayStartPos != 0){
                 if(line.contains("]")){
-                    String arrayString = "";
+                    StringBuilder arrayString = new StringBuilder();
                     int j = arrayStartPos;
                     for (; j < i+1; j++) {
-                        arrayString = arrayString + lines[j] + "\n";
+                        arrayString.append(lines[j]).append("\n");
                     }
                     i = j-1;
                     arrayStartPos = 0;
 
-                    value = parseList(arrayString);
+                    value = parseList(arrayString.toString());
                 }else continue;
             }else if (line.startsWith("variant                ")) {
                 // Should be value of the dict entry
 
-                String[] words = line.replaceFirst("variant                ", "").split(splitRegex);
+                String[] words = line.replaceFirst("variant {16}", "").split(splitRegex);
 
                 if (words[0].equals("array")) {
                     arrayStartPos=i;
