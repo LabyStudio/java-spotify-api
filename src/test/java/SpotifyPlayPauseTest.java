@@ -2,6 +2,7 @@
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyAPIFactory;
 import de.labystudio.spotifyapi.SpotifyListener;
+import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 
@@ -9,7 +10,7 @@ import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class SpotifyListenerTest {
+public class SpotifyPlayPauseTest {
 
     public static void main(String[] args) {
         SpotifyAPI api = SpotifyAPIFactory.create();
@@ -47,6 +48,9 @@ public class SpotifyListenerTest {
                         formatDuration(length),
                         (int) percentage
                 );
+
+                System.out.println("Triggered Play/Pause Media key");
+                api.pressMediaKey(MediaKey.PLAY_PAUSE);
             }
 
             @Override
@@ -56,7 +60,7 @@ public class SpotifyListenerTest {
 
             @Override
             public void onSync() {
-                // System.out.println(formatDuration(api.getPosition()));
+
             }
 
             @Override

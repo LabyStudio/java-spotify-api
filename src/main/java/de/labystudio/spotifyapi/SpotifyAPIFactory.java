@@ -1,6 +1,7 @@
 package de.labystudio.spotifyapi;
 
 import de.labystudio.spotifyapi.config.SpotifyConfiguration;
+import de.labystudio.spotifyapi.platform.linux.LinuxSpotifyApi;
 import de.labystudio.spotifyapi.platform.osx.OSXSpotifyApi;
 import de.labystudio.spotifyapi.platform.windows.WinSpotifyAPI;
 
@@ -16,7 +17,7 @@ public class SpotifyAPIFactory {
 
     /**
      * Creates a new SpotifyAPI instance for the current platform.
-     * Currently, only Windows and OSX are supported.
+     * Currently, only Windows, OSX and Linux are supported.
      *
      * @return A new SpotifyAPI instance.
      * @throws IllegalStateException if the current platform is not supported.
@@ -29,6 +30,9 @@ public class SpotifyAPIFactory {
         }
         if (os.contains("mac")) {
             return new OSXSpotifyApi();
+        }
+        if (os.contains("linux")) {
+            return new LinuxSpotifyApi();
         }
 
         throw new IllegalStateException("Unsupported OS: " + os);
