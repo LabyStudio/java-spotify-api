@@ -10,7 +10,7 @@ import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-public class SpotifyActionTest {
+public class SpotifyPlayPauseTest {
 
     public static void main(String[] args) {
         SpotifyAPI api = SpotifyAPIFactory.create();
