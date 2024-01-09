@@ -62,7 +62,7 @@ public class MPRISCommunicator {
     }
 
     public Integer getPosition() throws Exception {
-        return (int) ((Long) this.dbus.get("org.mpris.MediaPlayer2.Player", "Position").getValue() / 1000L) + 1;
+        return (int) ((Long) this.dbus.get("org.mpris.MediaPlayer2.Player", "Position").getValue() / 1000L);
     }
 
     public void playPause() throws Exception {
