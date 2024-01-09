@@ -68,7 +68,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
         // Handle position changes
         int position = this.mediaPlayer.getPosition();
-        if (!this.hasPosition() || Math.abs(position - this.getPosition()) >= 0) {
+        if ((!this.hasPosition() || Math.abs(position - this.getPosition()) >= 0) && isPlaying) {
             this.updatePosition(position);
         }
 
