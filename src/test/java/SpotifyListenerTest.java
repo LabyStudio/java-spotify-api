@@ -56,7 +56,7 @@ public class SpotifyListenerTest {
 
             @Override
             public void onSync() {
-
+                // System.out.println(formatDuration(api.getPosition()));
             }
 
             @Override
