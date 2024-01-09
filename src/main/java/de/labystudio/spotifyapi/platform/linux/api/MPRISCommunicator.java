@@ -54,7 +54,7 @@ public class MPRISCommunicator {
 
     public Integer getTrackLength() throws Exception {
         this.updateMetadata();
-        return (int) ((Long) this.metadata.get("mpris:length") / 1000L);
+        return (int) ((Long) this.metadata.get("mpris:length") / 1000L) + 1;
     }
 
     public boolean isPlaying() throws Exception {
