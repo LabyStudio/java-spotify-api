@@ -90,11 +90,12 @@ public class DBusSend {
             StringBuilder builder = new StringBuilder();
             String response;
             while ((response = reader.readLine()) != null) {
-                if (response.startsWith("method ")) {
-                    continue;
-                }
+                if (response.startsWith("method ")) continue;
+
                 builder.append(response).append("\n");
             }
+            if (builder.toString().isEmpty()) return new Variant("success", true);
+
             return Variant.parse(builder.toString());
         } else {
             // Handle error message
