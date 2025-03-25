@@ -61,6 +61,11 @@ public class OpenSpotifyAPI {
         });
     }
 
+    /**
+     * Request server time of Spotify for time-based one time password
+     *
+     * @return server time in seconds
+     */
     public long requestServerTime() throws IOException {
         // Get server time
         URL url = new URL(URL_API_SERVER_TIME);
@@ -78,22 +83,33 @@ public class OpenSpotifyAPI {
         return obj.get("serverTime").getAsLong();
     }
 
+    /**
+     * Generate time-based one time password
+     *
+     * @param serverTime server time in seconds
+     * @return 6 digits one time password
+     */
     public String generateTotp(long serverTime) {
+        // Convert secret numbers to xor results
         StringBuilder xorResults = new StringBuilder();
         for (int i = 0; i < TOTP_SECRET.length; i++) {
             int result = TOTP_SECRET[i] ^ (i % 33 + 9);
             xorResults.append(result);
         }
+
+        // Convert xor results to hex
         StringBuilder hexResult = new StringBuilder();
         for (int i = 0; i < xorResults.length(); i++) {
             hexResult.append(String.format("%02x", (int) xorResults.charAt(i)));
         }
+
+        // Convert hex to byte array
         byte[] byteArray = new byte[hexResult.length() / 2];
         for (int i = 0; i < hexResult.length(); i += 2) {
             int byteValue = Integer.parseInt(hexResult.substring(i, i + 2), 16);
             byteArray[i / 2] = (byte) byteValue;
         }
-        return TOTP.generateOtp(byteArray, serverTime);
+        return TOTP.generateOtp(byteArray, serverTime, 30, 6);
     }
 
     /**
@@ -114,10 +130,6 @@ public class OpenSpotifyAPI {
         }
 
         return response;
-    }
-
-    private boolean hasValidAccessToken(AccessTokenResponse response) {
-        return response != null && response.accessToken != null && !response.accessToken.isEmpty();
     }
 
     /**
@@ -375,6 +387,10 @@ public class OpenSpotifyAPI {
         ));
 
         return GSON.fromJson(reader, clazz);
+    }
+
+    private boolean hasValidAccessToken(AccessTokenResponse response) {
+        return response != null && response.accessToken != null && !response.accessToken.isEmpty();
     }
 
     public Cache<BufferedImage> getImageCache() {

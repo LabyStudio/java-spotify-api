@@ -11,11 +11,17 @@ public class TOTP {
 
     private static final String DEFAULT_ALGORITHM = "HmacSHA1";
 
-    private static final int DEFAULT_DIGITS = 6;
-    private static final int DEFAULT_PERIOD = 30;
-
-    public static String generateOtp(byte[] secret, long time) {
-        long counter = time / DEFAULT_PERIOD;
+    /**
+     * Generate a TOTP (Time-based One-Time Password) using the given secret, time, period, and number of digits.
+     *
+     * @param secret The secret key
+     * @param time   The time in milliseconds
+     * @param period The period in seconds
+     * @param digits The number of digits
+     * @return The generated TOTP
+     */
+    public static String generateOtp(byte[] secret, long time, int period, int digits) {
+        long counter = time / period;
 
 
         // Convert counter to byte array (Big Endian)
@@ -38,10 +44,10 @@ public class TOTP {
                     (hmac[offset + 3] & 0xFF);
 
             // Compute OTP
-            int otp = binary % ((int) Math.pow(10, DEFAULT_DIGITS));
+            int otp = binary % ((int) Math.pow(10, digits));
 
             // Return zero-padded OTP
-            return String.format("%0" + DEFAULT_DIGITS + "d", otp);
+            return String.format("%0" + digits + "d", otp);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new IllegalStateException("Failed to generate TOTP", e);
         }
