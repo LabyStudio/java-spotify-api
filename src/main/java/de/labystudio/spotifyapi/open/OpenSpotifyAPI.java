@@ -1,16 +1,21 @@
 package de.labystudio.spotifyapi.open;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.open.model.AccessTokenResponse;
 import de.labystudio.spotifyapi.open.model.track.OpenTrack;
+import de.labystudio.spotifyapi.open.util.TOTP;
 
 import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
@@ -27,10 +32,13 @@ public class OpenSpotifyAPI {
 
     private static final Gson GSON = new Gson();
 
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/71.0.3578.98";
+    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/71.0.3578." + (int) (Math.random() * 90);
 
-    private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/get_access_token?reason=transport&productType=web_player";
+    private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/get_access_token?reason=%s&productType=web-player&totp=%s&totpVer=5";
     private static final String URL_API_TRACKS = "https://api.spotify.com/v1/tracks/%s";
+    private static final String URL_API_SERVER_TIME = "https://open.spotify.com/server-time";
+
+    public static final int[] TOTP_SECRET = {12, 56, 76, 33, 88, 44, 88, 33, 78, 78, 11, 66, 22, 22, 55, 69, 54};
 
     private final Executor executor = Executors.newSingleThreadExecutor();
 
@@ -53,15 +61,85 @@ public class OpenSpotifyAPI {
         });
     }
 
+    public long requestServerTime() throws IOException {
+        // Get server time
+        URL url = new URL(URL_API_SERVER_TIME);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Host", "open.spotify.com");
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+        conn.setRequestProperty("accept", "*/*");
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        String response = reader.readLine();
+        reader.close();
+
+        JsonObject obj = GSON.fromJson(response, JsonObject.class);
+        return obj.get("serverTime").getAsLong();
+    }
+
+    public String generateTotp(long serverTime) {
+        StringBuilder xorResults = new StringBuilder();
+        for (int i = 0; i < TOTP_SECRET.length; i++) {
+            int result = TOTP_SECRET[i] ^ (i % 33 + 9);
+            xorResults.append(result);
+        }
+        StringBuilder hexResult = new StringBuilder();
+        for (int i = 0; i < xorResults.length(); i++) {
+            hexResult.append(String.format("%02x", (int) xorResults.charAt(i)));
+        }
+        byte[] byteArray = new byte[hexResult.length() / 2];
+        for (int i = 0; i < hexResult.length(); i += 2) {
+            int byteValue = Integer.parseInt(hexResult.substring(i, i + 2), 16);
+            byteArray[i / 2] = (byte) byteValue;
+        }
+        return TOTP.generateOtp(byteArray, serverTime);
+    }
+
     /**
      * Generate an access token for the open spotify api
      */
     private AccessTokenResponse generateAccessToken() throws IOException {
+        long serverTime = this.requestServerTime();
+        String totp = this.generateTotp(serverTime);
+
+        AccessTokenResponse response = this.getToken("transport", totp);
+
+        if (!this.hasValidAccessToken(response)) {
+            response = this.getToken("init", totp);
+        }
+
+        if (!this.hasValidAccessToken(response)) {
+            throw new IOException("Could not generate access token");
+        }
+
+        return response;
+    }
+
+    private boolean hasValidAccessToken(AccessTokenResponse response) {
+        return response != null && response.accessToken != null && !response.accessToken.isEmpty();
+    }
+
+    /**
+     * Retrieve access token using totp
+     */
+    private AccessTokenResponse getToken(String mode, String totp) throws IOException {
         // Open connection
-        HttpsURLConnection connection = (HttpsURLConnection) new URL(URL_API_GEN_ACCESS_TOKEN).openConnection();
+        String url = String.format(URL_API_GEN_ACCESS_TOKEN, mode, totp);
+        HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
         connection.addRequestProperty("User-Agent", USER_AGENT);
         connection.addRequestProperty("referer", "https://open.spotify.com/");
         connection.addRequestProperty("app-platform", "WebPlayer");
+
+        int code = connection.getResponseCode();
+        if (code != HttpURLConnection.HTTP_OK) {
+            InputStream errorStream = connection.getErrorStream();
+            if (errorStream != null) {
+                JsonReader reader = new JsonReader(new InputStreamReader(errorStream));
+                JsonObject response = GSON.fromJson(reader, JsonObject.class);
+                throw new IOException("Could not retrieve access token: " + response.toString());
+            }
+        }
 
         // Read response
         JsonReader reader = new JsonReader(new InputStreamReader(connection.getInputStream()));
