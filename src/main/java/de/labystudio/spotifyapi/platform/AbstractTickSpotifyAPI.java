@@ -8,6 +8,7 @@ import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,7 +28,10 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
     private SpotifyConfiguration configuration;
 
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
     private ScheduledFuture<?> task;
+
     private long timeLastException = -1;
 
     /**
@@ -35,25 +39,23 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
      * It will create a task that will update the current track and position every second.
      *
      * @return the initialized SpotifyAPI
-     * @throws IllegalStateException if the API is already initialized
+     * @throws IllegalStateException if the API is already initialized or has been shutdown
      */
     @Override
     public SpotifyAPI initialize(SpotifyConfiguration configuration) {
         synchronized (this) {
             this.configuration = configuration;
 
+            if (this.executor.isShutdown()) {
+                throw new IllegalStateException("This SpotifyAPI has been shutdown and cannot be reused");
+            }
+
             if (this.isInitialized()) {
-                throw new IllegalStateException("The SpotifyAPI is already initialized");
+                throw new IllegalStateException("This SpotifyAPI is already initialized");
             }
 
             // Start task to update every second
-            this.task = Executors.newScheduledThreadPool(1)
-                    .scheduleWithFixedDelay(
-                            this::onInternalTick,
-                            0,
-                            1,
-                            TimeUnit.SECONDS
-                    );
+            this.task = this.executor.scheduleWithFixedDelay(this::onInternalTick, 0L, 1L, TimeUnit.SECONDS);
         }
         return this;
     }
@@ -119,5 +121,11 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
                 this.task = null;
             }
         }
+    }
+
+    @Override
+    public void shutdown() {
+        this.stop();
+        this.executor.shutdownNow();
     }
 }
