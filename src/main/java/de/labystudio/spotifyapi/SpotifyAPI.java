@@ -36,7 +36,6 @@ public interface SpotifyAPI {
      */
     SpotifyAPI initialize(SpotifyConfiguration configuration);
 
-
     /**
      * Initialize the SpotifyAPI and connect to the Spotify process asynchronously.
      *
@@ -46,7 +45,6 @@ public interface SpotifyAPI {
     default CompletableFuture<SpotifyAPI> initializeAsync(SpotifyConfiguration configuration) {
         return CompletableFuture.supplyAsync(() -> this.initialize(configuration));
     }
-
 
     /**
      * Initialize the SpotifyAPI and connect to the Spotify process asynchronously.
@@ -119,7 +117,6 @@ public interface SpotifyAPI {
      */
     boolean isConnected();
 
-
     /**
      * Returns true if the background process is running.
      *
@@ -154,4 +151,11 @@ public interface SpotifyAPI {
      * Disconnect from the Spotify application and stop all background tasks.
      */
     void stop();
+
+    /**
+     * Similar to {@link SpotifyAPI#stop()} but releases any held resources.
+     * <p>
+     * Should only be called if there is no intent to reuse this instance.
+     */
+    void shutdown();
 }
