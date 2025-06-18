@@ -33,10 +33,10 @@ public class OpenSpotifyAPI {
     private static final Gson GSON = new Gson();
 
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/71.0.3578." + (int) (Math.random() * 90);
+    private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/api/token?reason=%s&productType=web-player&totp=%s&totpVer=5";
 
-    private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/get_access_token?reason=%s&productType=web-player&totp=%s&totpVer=5";
     private static final String URL_API_TRACKS = "https://api.spotify.com/v1/tracks/%s";
-    private static final String URL_API_SERVER_TIME = "https://open.spotify.com/server-time";
+    private static final String URL_API_SERVER_TIME = "https://open.spotify.com/api/server-time";
 
     public static final int[] TOTP_SECRET = {12, 56, 76, 33, 88, 44, 88, 33, 78, 78, 11, 66, 22, 22, 55, 69, 54};
 
