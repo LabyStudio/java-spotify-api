@@ -6,7 +6,9 @@ import com.google.gson.stream.JsonReader;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.open.model.AccessTokenResponse;
 import de.labystudio.spotifyapi.open.model.track.OpenTrack;
-import de.labystudio.spotifyapi.open.util.TOTP;
+import de.labystudio.spotifyapi.open.totp.Secret;
+import de.labystudio.spotifyapi.open.totp.SecretFetcher;
+import de.labystudio.spotifyapi.open.totp.TOTP;
 
 import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
@@ -30,15 +32,13 @@ import java.util.function.Consumer;
  */
 public class OpenSpotifyAPI {
 
-    private static final Gson GSON = new Gson();
+    public static final Gson GSON = new Gson();
 
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/71.0.3578." + (int) (Math.random() * 90);
-    private static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/api/token?reason=%s&productType=web-player&totp=%s&totpVer=5";
+    public static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537." + (int) (Math.random() * 90);
+    public static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/api/token?reason=%s&productType=web-player&totp=%s&totpServer=%s&totpVer=%s";
 
-    private static final String URL_API_TRACKS = "https://api.spotify.com/v1/tracks/%s";
-    private static final String URL_API_SERVER_TIME = "https://open.spotify.com/api/server-time";
-
-    public static final int[] TOTP_SECRET = {12, 56, 76, 33, 88, 44, 88, 33, 78, 78, 11, 66, 22, 22, 55, 69, 54};
+    public static final String URL_API_TRACKS = "https://api.spotify.com/v1/tracks/%s";
+    public static final String URL_API_SERVER_TIME = "https://open.spotify.com/api/server-time";
 
     private final Executor executor = Executors.newSingleThreadExecutor();
 
@@ -72,8 +72,8 @@ public class OpenSpotifyAPI {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
         conn.setRequestProperty("Host", "open.spotify.com");
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-        conn.setRequestProperty("accept", "*/*");
+        conn.setRequestProperty("User-Agent", USER_AGENT);
+        conn.setRequestProperty("Accept", "application/json");
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         String response = reader.readLine();
@@ -84,45 +84,18 @@ public class OpenSpotifyAPI {
     }
 
     /**
-     * Generate time-based one time password
-     *
-     * @param serverTime server time in seconds
-     * @return 6 digits one time password
-     */
-    public String generateTotp(long serverTime) {
-        // Convert secret numbers to xor results
-        StringBuilder xorResults = new StringBuilder();
-        for (int i = 0; i < TOTP_SECRET.length; i++) {
-            int result = TOTP_SECRET[i] ^ (i % 33 + 9);
-            xorResults.append(result);
-        }
-
-        // Convert xor results to hex
-        StringBuilder hexResult = new StringBuilder();
-        for (int i = 0; i < xorResults.length(); i++) {
-            hexResult.append(String.format("%02x", (int) xorResults.charAt(i)));
-        }
-
-        // Convert hex to byte array
-        byte[] byteArray = new byte[hexResult.length() / 2];
-        for (int i = 0; i < hexResult.length(); i += 2) {
-            int byteValue = Integer.parseInt(hexResult.substring(i, i + 2), 16);
-            byteArray[i / 2] = (byte) byteValue;
-        }
-        return TOTP.generateOtp(byteArray, serverTime, 30, 6);
-    }
-
-    /**
      * Generate an access token for the open spotify api
      */
     private AccessTokenResponse generateAccessToken() throws IOException {
+        SecretFetcher secretFetcher = new SecretFetcher();
+        Secret secret = secretFetcher.fetchLatest();
         long serverTime = this.requestServerTime();
-        String totp = this.generateTotp(serverTime);
+        String totp = TOTP.generateOtp(secret.toBytes(), serverTime, 30, 6);
 
-        AccessTokenResponse response = this.getToken("transport", totp);
+        AccessTokenResponse response = this.getToken("transport", totp, secret.getVersion());
 
         if (!this.hasValidAccessToken(response)) {
-            response = this.getToken("init", totp);
+            response = this.getToken("init", totp, secret.getVersion());
         }
 
         if (!this.hasValidAccessToken(response)) {
@@ -135,13 +108,14 @@ public class OpenSpotifyAPI {
     /**
      * Retrieve access token using totp
      */
-    private AccessTokenResponse getToken(String mode, String totp) throws IOException {
+    private AccessTokenResponse getToken(String mode, String totp, int version) throws IOException {
         // Open connection
-        String url = String.format(URL_API_GEN_ACCESS_TOKEN, mode, totp);
+        String url = String.format(URL_API_GEN_ACCESS_TOKEN, mode, totp, totp, version);
         HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
         connection.addRequestProperty("User-Agent", USER_AGENT);
         connection.addRequestProperty("referer", "https://open.spotify.com/");
         connection.addRequestProperty("app-platform", "WebPlayer");
+        connection.setRequestProperty("Accept", "application/json");
 
         int code = connection.getResponseCode();
         if (code != HttpURLConnection.HTTP_OK) {

@@ -1,4 +1,4 @@
-package de.labystudio.spotifyapi.open.util;
+package de.labystudio.spotifyapi.open.totp;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
