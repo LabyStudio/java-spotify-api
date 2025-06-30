@@ -13,14 +13,34 @@ import java.util.zip.ZipOutputStream;
 public class SpotifyEnableDevMode {
 
     public static void main(String[] args) throws IOException {
-        enableDevTools(Paths.get(System.getenv("LOCALAPPDATA"), "Spotify"));
-        enableEmployeeMode(Paths.get(System.getenv("APPDATA"), "Spotify"));
+        boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+
+        Path spotifyApp = isWindows
+                ? Paths.get(System.getenv("APPDATA"), "Spotify")
+                : Paths.get("/opt/spotify");
+        if (!Files.exists(spotifyApp)) {
+            System.err.println("Spotify application directory not found: " + spotifyApp);
+            return;
+        }
+        enableEmployeeMode(spotifyApp);
+
+        Path spotifyCache = isWindows
+                ? Paths.get(System.getenv("LOCALAPPDATA"), "Spotify")
+                : Paths.get("/home", System.getProperty("user.name"), ".cache", "spotify");
+        if (!Files.exists(spotifyCache)) {
+            System.err.println("Spotify cache directory not found: " + spotifyCache);
+            return;
+        }
+
+        enableDevTools(spotifyCache);
     }
 
     private static void enableDevTools(Path spotifyLocal) throws IOException {
         Path file = spotifyLocal.resolve("offline.bnk");
         TextPatcher patcher = (fileName, content) -> {
-            return content.replaceAll("(?<=app-developer..|app-developer>)0", "2");
+            content = content.replaceAll("(?<=app-developer..|app-developer>)0", "2");
+            System.out.println("Patched " + fileName + " to enable developer tools.");
+            return content;
         };
         patchFile(file, patcher);
     }
@@ -28,15 +48,17 @@ public class SpotifyEnableDevMode {
     private static void enableEmployeeMode(Path spotifyAppData) throws IOException {
         Path appsDir = spotifyAppData.resolve("Apps");
         Path xpuiSpa = appsDir.resolve("xpui.spa");
-
         patchArchive(xpuiSpa, (TextPatcher) (fileName, content) -> {
-            if (!fileName.equals("xpui.js")) {
-                return content;
+            if (!fileName.endsWith(".js")) {
+                return content; // Only patch JavaScript files
             }
-
-            content = content.replaceAll("\"1\"===e.employee", " true"); // Minified
-            content = content.replaceAll("\"1\" === e.employee", " true"); // Formatted
-
+            if (content.contains(".employee.isEmployee")) {
+                content = content.replace(
+                        ".employee.isEmployee",
+                        ".autoPlay"
+                );
+                System.out.println("Patched " + fileName + " to enable employee mode.");
+            }
             return content;
         });
     }
@@ -46,11 +68,19 @@ public class SpotifyEnableDevMode {
     }
 
     private static void patchArchive(Path archive, Patcher patcher) throws IOException {
-        // Move archive to temp location
-        Path tempArchive = archive.getParent().resolve(archive.getFileName() + ".tmp");
         if (!Files.exists(archive)) {
-            Files.move(archive, tempArchive);
+            System.err.println("Archive not found: " + archive);
+            return;
         }
+
+        if (!Files.isWritable(archive)) {
+            System.err.println("No write permission for archive: " + archive);
+            return;
+        }
+
+        // Move archive to temp location
+        Path tempArchive = Paths.get(System.getProperty("java.io.tmpdir"), "spotify-temp-" + archive.getFileName());
+        Files.copy(archive, tempArchive);
 
         // Write patched archive to original location
         try (
@@ -77,6 +107,9 @@ public class SpotifyEnableDevMode {
                     zos.write(outputBytes);
                 }
             }
+        } finally {
+            // Delete temp archive
+            Files.deleteIfExists(tempArchive);
         }
     }
 
