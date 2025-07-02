@@ -2,6 +2,8 @@ package de.labystudio.spotifyapi.open.totp.provider;
 
 import de.labystudio.spotifyapi.open.totp.model.Secret;
 
+import java.io.IOException;
+
 /**
  * This interface is used to provide a secret for TOTP generation.
  * It must be implemented to retrieve the latest secret from open.spotify.com
@@ -15,5 +17,5 @@ public interface SecretProvider {
      *
      * @return The latest TOTP secret used for generating time-based one-time passwords.
      */
-    Secret getSecret();
+    Secret getSecret() throws IOException;
 }

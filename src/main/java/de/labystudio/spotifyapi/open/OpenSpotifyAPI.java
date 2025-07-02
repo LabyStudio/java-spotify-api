@@ -98,6 +98,9 @@ public class OpenSpotifyAPI {
      */
     private AccessTokenResponse generateAccessToken() throws IOException {
         Secret secret = this.secretProvider.getSecret();
+        if (secret == null) {
+            throw new IOException("No TOTP secret provided");
+        }
 
         long serverTime = this.requestServerTime();
         String totp = TOTP.generateOtp(secret.toBytes(), serverTime, 30, 6);
