@@ -106,14 +106,6 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
     }
 
     @Override
-    public final OpenSpotifyAPI getOpenAPI() {
-        if (this.openAPI == null) {
-            this.openAPI = new OpenSpotifyAPI();
-        }
-        return this.openAPI;
-    }
-
-    @Override
     public void stop() {
         synchronized (this) {
             if (this.task != null) {

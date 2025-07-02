@@ -47,61 +47,76 @@ if (api.hasPosition()) {
 
 Register a listener to get notified when the song changes:
 ```java
-SpotifyAPI api = SpotifyAPIFactory.create();
-api.registerListener(new SpotifyListener() {
+SpotifyAPI localApi = SpotifyAPIFactory.create();
+localApi.registerListener(new SpotifyListener() {
     @Override
     public void onConnect() {
         System.out.println("Connected to Spotify!");
     }
-    
+
     @Override
     public void onTrackChanged(Track track) {
         System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
+
+        // You could use the OpenSpotifyAPI to request the track cover image
+        // try {
+        //     BufferedImage imageTrackCover = openApi.requestImage(track);
+        //     System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
+        // } catch (Exception e) {
+        //     System.out.println("Could not load track cover: " + e.getMessage());
+        // }
     }
-    
+
     @Override
     public void onPositionChanged(int position) {
-        if (!api.hasTrack()) {
+        if (!localApi.hasTrack()) {
             return;
         }
-        
-        int length = api.getTrack().getLength();
+
+        int length = localApi.getTrack().getLength();
         float percentage = 100.0F / length * position;
-        
+
         System.out.printf(
-            "Position changed: %s of %s (%d%%)\n",
-            formatDuration(position),
-            formatDuration(length),
-            (int) percentage
+                "Position changed: %s of %s (%d%%)\n",
+                formatDuration(position),
+                formatDuration(length),
+                (int) percentage
         );
     }
-    
+
     @Override
     public void onPlayBackChanged(boolean isPlaying) {
         System.out.println(isPlaying ? "Song started playing" : "Song stopped playing");
     }
-    
+
     @Override
     public void onSync() {
-        
+        // System.out.println(formatDuration(api.getPosition()));
     }
-    
+
     @Override
     public void onDisconnect(Exception exception) {
         System.out.println("Disconnected: " + exception.getMessage());
-        
+
         // api.stop();
     }
 });
 
 // Initialize the API
-api.initialize();
+localApi.initialize();
 ```
 
 Fetch an image of the current playing track:
 ```java
-// Create an instance of the Open Spotify API (Or use SpotifyAPI#getOpenAPI)
-OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI();
+// Create a secret provider
+SecretProvider secretProvider = new DefaultSecretProvider(
+        // Note: You have to update the secret with the latest TOTP secret from open.spotify.com
+        // or find a way to retrieve it automatically from their website
+        Secret.fromString("meZcB\\tlUFV1D6W2Hy4@9+$QaH5)N8", 9)
+);
+
+// Create an instance of the Open Spotify API
+OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI(secretProvider);
 
 // Download the cover art of the current song
 BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);

@@ -1,14 +1,16 @@
 package de.labystudio.spotifyapi.open;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.open.model.AccessTokenResponse;
 import de.labystudio.spotifyapi.open.model.track.OpenTrack;
-import de.labystudio.spotifyapi.open.totp.Secret;
-import de.labystudio.spotifyapi.open.totp.SecretFetcher;
 import de.labystudio.spotifyapi.open.totp.TOTP;
+import de.labystudio.spotifyapi.open.totp.gson.SecretDeserializer;
+import de.labystudio.spotifyapi.open.totp.model.Secret;
+import de.labystudio.spotifyapi.open.totp.provider.SecretProvider;
 
 import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
@@ -32,7 +34,9 @@ import java.util.function.Consumer;
  */
 public class OpenSpotifyAPI {
 
-    public static final Gson GSON = new Gson();
+    public static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(Secret.class, new SecretDeserializer())
+            .create();
 
     public static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537." + (int) (Math.random() * 90);
     public static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/api/token?reason=%s&productType=web-player&totp=%s&totpServer=%s&totpVer=%s";
@@ -45,7 +49,13 @@ public class OpenSpotifyAPI {
     private final Cache<BufferedImage> imageCache = new Cache<>(10);
     private final Cache<OpenTrack> openTrackCache = new Cache<>(100);
 
+    private final SecretProvider secretProvider;
+
     private AccessTokenResponse accessTokenResponse;
+
+    public OpenSpotifyAPI(SecretProvider secretProvider) {
+        this.secretProvider = secretProvider;
+    }
 
     /**
      * Generate an access token asynchronously for the open spotify api
@@ -87,8 +97,8 @@ public class OpenSpotifyAPI {
      * Generate an access token for the open spotify api
      */
     private AccessTokenResponse generateAccessToken() throws IOException {
-        SecretFetcher secretFetcher = new SecretFetcher();
-        Secret secret = secretFetcher.fetchLatest();
+        Secret secret = this.secretProvider.getSecret();
+
         long serverTime = this.requestServerTime();
         String totp = TOTP.generateOtp(secret.toBytes(), serverTime, 30, 6);
 

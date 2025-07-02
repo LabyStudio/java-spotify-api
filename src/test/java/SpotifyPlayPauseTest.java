@@ -1,12 +1,9 @@
-
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyAPIFactory;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
-import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 
-import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -14,7 +11,6 @@ public class SpotifyPlayPauseTest {
 
     public static void main(String[] args) {
         SpotifyAPI api = SpotifyAPIFactory.create();
-        OpenSpotifyAPI openSpotifyAPI = api.getOpenAPI();
         api.registerListener(new SpotifyListener() {
             @Override
             public void onConnect() {
@@ -24,13 +20,6 @@ public class SpotifyPlayPauseTest {
             @Override
             public void onTrackChanged(Track track) {
                 System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
-
-                try {
-                    BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);
-                    System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
-                } catch (Exception e) {
-                    System.out.println("Could not load track cover: " + e.getMessage());
-                }
             }
 
             @Override

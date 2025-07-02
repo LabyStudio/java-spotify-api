@@ -7,6 +7,12 @@ import java.nio.ByteOrder;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * This class is used to generate a TOTP (Time-based One-Time Password) using the given secret, time, period, and number of digits.
+ * It uses the HMAC-SHA1 algorithm to compute the TOTP based on the provided parameters.
+ *
+ * @author LabyStudio
+ */
 public class TOTP {
 
     private static final String DEFAULT_ALGORITHM = "HmacSHA1";
@@ -22,7 +28,6 @@ public class TOTP {
      */
     public static String generateOtp(byte[] secret, long time, int period, int digits) {
         long counter = time / period;
-
 
         // Convert counter to byte array (Big Endian)
         ByteBuffer buffer = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
@@ -52,6 +57,4 @@ public class TOTP {
             throw new IllegalStateException("Failed to generate TOTP", e);
         }
     }
-
-
 }

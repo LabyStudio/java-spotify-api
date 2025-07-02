@@ -3,7 +3,6 @@ package de.labystudio.spotifyapi;
 import de.labystudio.spotifyapi.config.SpotifyConfiguration;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
-import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -144,8 +143,6 @@ public interface SpotifyAPI {
      * @return the current set configuration of the api
      */
     SpotifyConfiguration getConfiguration();
-
-    OpenSpotifyAPI getOpenAPI();
 
     /**
      * Disconnect from the Spotify application and stop all background tasks.

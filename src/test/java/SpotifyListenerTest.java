@@ -1,20 +1,16 @@
-
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyAPIFactory;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.Track;
-import de.labystudio.spotifyapi.open.OpenSpotifyAPI;
 
-import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 public class SpotifyListenerTest {
 
     public static void main(String[] args) {
-        SpotifyAPI api = SpotifyAPIFactory.create();
-        OpenSpotifyAPI openSpotifyAPI = api.getOpenAPI();
-        api.registerListener(new SpotifyListener() {
+        SpotifyAPI localApi = SpotifyAPIFactory.create();
+        localApi.registerListener(new SpotifyListener() {
             @Override
             public void onConnect() {
                 System.out.println("Connected to Spotify!");
@@ -24,21 +20,22 @@ public class SpotifyListenerTest {
             public void onTrackChanged(Track track) {
                 System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
 
-                try {
-                    BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);
-                    System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
-                } catch (Exception e) {
-                    System.out.println("Could not load track cover: " + e.getMessage());
-                }
+                // You could use the OpenSpotifyAPI to request the track cover image
+                // try {
+                //     BufferedImage imageTrackCover = openApi.requestImage(track);
+                //     System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
+                // } catch (Exception e) {
+                //     System.out.println("Could not load track cover: " + e.getMessage());
+                // }
             }
 
             @Override
             public void onPositionChanged(int position) {
-                if (!api.hasTrack()) {
+                if (!localApi.hasTrack()) {
                     return;
                 }
 
-                int length = api.getTrack().getLength();
+                int length = localApi.getTrack().getLength();
                 float percentage = 100.0F / length * position;
 
                 System.out.printf(
@@ -68,7 +65,7 @@ public class SpotifyListenerTest {
         });
 
         // Initialize the API
-        api.initialize();
+        localApi.initialize();
     }
 
     private static String formatDuration(long ms) {

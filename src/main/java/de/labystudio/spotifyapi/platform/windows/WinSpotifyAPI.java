@@ -3,7 +3,6 @@ package de.labystudio.spotifyapi.platform.windows;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
-import de.labystudio.spotifyapi.open.model.track.OpenTrack;
 import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import de.labystudio.spotifyapi.platform.windows.api.WinApi;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
@@ -68,18 +67,6 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             if (title != SpotifyTitle.UNKNOWN) {
                 int trackLength = playback.getLength();
                 boolean isFirstTrack = !this.hasTrack();
-
-                // Request track length from open API if not available
-                if (!playback.hasTrackLength()) {
-                    try {
-                        OpenTrack openTrack = this.getOpenAPI().requestOpenTrack(trackId);
-                        if (openTrack != null) {
-                            trackLength = openTrack.durationMs;
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
 
                 Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
                 this.currentTrack = track;
