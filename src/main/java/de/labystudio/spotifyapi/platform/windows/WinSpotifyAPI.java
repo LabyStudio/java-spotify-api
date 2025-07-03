@@ -135,6 +135,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     @Override
     public boolean hasPosition() {
+        if (this.process == null) {
+            return false;
+        }
+
         PlaybackAccessor playback = this.process.getPlaybackAccessor();
         return playback.hasTrackPosition();
     }
