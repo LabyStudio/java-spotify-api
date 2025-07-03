@@ -139,7 +139,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     @Override
     public boolean hasPosition() {
-        if (this.process == null) {
+        if (!this.isConnected()) {
             return false;
         }
 
