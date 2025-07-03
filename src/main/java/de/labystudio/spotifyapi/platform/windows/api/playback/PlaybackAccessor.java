@@ -16,6 +16,6 @@ public interface PlaybackAccessor {
     }
 
     default boolean hasTrackPosition() {
-        return this.getPosition() >= 0 && (!this.hasTrackLength() || this.getPosition() <= this.getLength());
+        return this.getPosition() >= 0 && this.hasTrackLength() && this.getPosition() <= this.getLength();
     }
 }

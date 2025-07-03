@@ -24,6 +24,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     private Track currentTrack;
     private int currentPosition = -1;
+    private boolean hasTrackPosition = false;
     private boolean isPlaying;
 
     private long lastTimePositionUpdated;
@@ -102,8 +103,11 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
                     this.listeners.forEach(listener -> listener.onPositionChanged(this.currentPosition));
                 }
             }
+
+            this.hasTrackPosition = true;
         } else {
             this.currentPosition = -1;
+            this.hasTrackPosition = false;
             this.lastTimePositionUpdated = System.currentTimeMillis();
         }
 
@@ -142,9 +146,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (!this.isConnected()) {
             return false;
         }
-
-        PlaybackAccessor playback = this.process.getMainPlaybackAccessor();
-        return playback.hasTrackPosition();
+        return this.hasTrackPosition;
     }
 
     @Override
