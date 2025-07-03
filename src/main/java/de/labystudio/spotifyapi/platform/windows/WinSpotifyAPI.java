@@ -84,6 +84,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
 
         if (playback.hasTrackPosition()) {
+            this.hasTrackPosition = true;
+
             int lastReportedPosition = playback.getPosition();
 
             if (this.prevLastReportedPosition != lastReportedPosition) {
@@ -103,8 +105,6 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
                     this.listeners.forEach(listener -> listener.onPositionChanged(this.currentPosition));
                 }
             }
-
-            this.hasTrackPosition = true;
         } else {
             this.currentPosition = -1;
             this.hasTrackPosition = false;
@@ -189,6 +189,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             this.process.close();
             this.process = null;
         }
+
+        this.currentTrack = null;
+        this.currentPosition = -1;
+        this.hasTrackPosition = false;
     }
 
 }
