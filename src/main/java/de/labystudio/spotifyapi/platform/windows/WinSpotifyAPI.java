@@ -27,18 +27,16 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private boolean isPlaying;
 
     private long lastTimePositionUpdated;
-    private boolean positionKnown = false;
-    private long lastAccessorPosition = -1;
-    private long lastTimeSynced;
+    private long prevLastReportedPosition = -1;
 
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
      */
-    protected void onTick() throws Exception {
+    protected void onTick() {
         if (!this.isConnected()) {
             // Connect
-            this.process = new SpotifyProcess();
+            this.process = new SpotifyProcess(this.configuration);
 
             // Fire on connect
             this.listeners.forEach(SpotifyListener::onConnect);
@@ -49,35 +47,25 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
         // Update playback status and check if it is valid
         if (!this.process.isTrackIdValid(trackId) || !playback.update()) {
-            this.positionKnown = false;
             this.currentPosition = -1;
             throw new IllegalStateException("Could not update playback");
         }
 
         // Handle track changes
-        if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-            // Wait two seconds before updating the track, so Spotify has enough time to update the playback
-            if ((!this.hasTrack() || playback.getLength() == this.currentTrack.getLength())
-                    && playback.getPosition() >= this.currentPosition
-                    && System.currentTimeMillis() - this.lastTimeSynced < 2000) {
-                return;
-            }
-
+        String currentTrackId = this.currentTrack == null ? null : this.currentTrack.getId();
+        if (!Objects.equals(trackId, currentTrackId)) {
             SpotifyTitle title = this.process.getTitle();
             if (title != SpotifyTitle.UNKNOWN) {
-                int trackLength = playback.getLength();
-                boolean isFirstTrack = !this.hasTrack();
-
-                Track track = new Track(trackId, title.getTrackName(), title.getTrackArtist(), trackLength);
+                Track track = new Track(
+                        trackId,
+                        title.getTrackName(),
+                        title.getTrackArtist(),
+                        playback.getLength()
+                );
                 this.currentTrack = track;
 
                 // Fire on track changed
                 this.listeners.forEach(listener -> listener.onTrackChanged(track));
-
-                // Reset position on song change
-                if (!isFirstTrack) {
-                    this.updatePosition(0, true);
-                }
             }
         }
 
@@ -86,46 +74,37 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
-            // Forget position if the song is paused and the position is unknown
-            if (!playback.hasTrackPosition()) {
-                this.positionKnown = false;
-                this.currentPosition = -1;
-            }
-
             // Fire on play back changed
             this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
         }
 
-        // Handle position changes
-        int position = playback.getPosition();
-        if (playback.hasTrackPosition() && position != this.lastAccessorPosition) {
-            this.lastAccessorPosition = position;
-            this.updatePosition(position, false);
+        if (playback.hasTrackPosition()) {
+            int lastReportedPosition = playback.getPosition();
+
+            if (this.prevLastReportedPosition != lastReportedPosition) {
+                this.prevLastReportedPosition = lastReportedPosition;
+
+                // Get the daemon position (Last reported position + relative time)
+                int expectedPosition = this.getPosition();
+
+                // Compare if the expected position based on time and the last reported position are close enough
+                boolean seeked = Math.abs(lastReportedPosition - expectedPosition) > TICK_INTERVAL;
+
+                this.currentPosition = lastReportedPosition;
+                this.lastTimePositionUpdated = System.currentTimeMillis();
+
+                // Fire on position changed
+                if (seeked) {
+                    this.listeners.forEach(listener -> listener.onPositionChanged(this.currentPosition));
+                }
+            }
+        } else {
+            this.currentPosition = -1;
+            this.lastTimePositionUpdated = System.currentTimeMillis();
         }
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
-        this.lastTimeSynced = System.currentTimeMillis();
-    }
-
-    private void updatePosition(int position, boolean force) {
-        if (position == this.currentPosition && !force) {
-            return;
-        }
-
-        // The position is known if the song is currently paused
-        // or if the position has changed during the runtime of the program.
-        // (The position update is also called when the memory content is empty)
-        this.positionKnown = force || this.currentPosition != -1 || !this.isPlaying;
-
-        // Update position
-        this.currentPosition = position;
-        this.lastTimePositionUpdated = System.currentTimeMillis();
-
-        // Fire on position changed if the position is known
-        if (this.positionKnown) {
-            this.listeners.forEach(listener -> listener.onPositionChanged(position));
-        }
     }
 
     @Override
@@ -135,7 +114,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     @Override
     public int getPosition() {
-        if (!this.positionKnown) {
+        if (!this.hasPosition()) {
             throw new IllegalStateException("Position is not known yet. Pause the song for a second and try again.");
         }
 
@@ -156,7 +135,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
     @Override
     public boolean hasPosition() {
-        return this.positionKnown;
+        PlaybackAccessor playback = this.process.getPlaybackAccessor();
+        return playback.hasTrackPosition();
     }
 
     @Override

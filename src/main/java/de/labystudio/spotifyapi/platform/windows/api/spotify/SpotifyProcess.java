@@ -1,10 +1,18 @@
 package de.labystudio.spotifyapi.platform.windows.api.spotify;
 
+import de.labystudio.spotifyapi.config.SpotifyConfiguration;
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
-import de.labystudio.spotifyapi.platform.windows.api.playback.MemoryPlaybackAccessor;
+import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
-import de.labystudio.spotifyapi.platform.windows.api.playback.PseudoPlaybackAccessor;
+import de.labystudio.spotifyapi.platform.windows.api.playback.source.MediaControlPlaybackAccessor;
+import de.labystudio.spotifyapi.platform.windows.api.playback.source.PseudoPlaybackAccessor;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 /**
  * This class represents the Spotify Windows application.
@@ -18,6 +26,7 @@ public class SpotifyProcess extends WinProcess {
     // Spotify track id
     private static final String PREFIX_SPOTIFY_TRACK = "spotify:track:";
     private static final long[] OFFSETS_TRACK_ID = {
+            0x18bc90, // 64-Bit (1.2.66.447.g4e37e896)
             0x154A60, // 64-Bit (1.2.26.1187.g36b715a1)
             0x14FA30, // 64-Bit (1.2.21.1104.g42cf0a50)
             0x106198, // 32-Bit (1.2.21.1104.g42cf0a50)
@@ -30,6 +39,8 @@ public class SpotifyProcess extends WinProcess {
     private final long addressTrackId;
     private final PlaybackAccessor playbackAccessor;
 
+    private WindowsMediaControl mediaControl;
+
     private SpotifyTitle previousTitle = SpotifyTitle.UNKNOWN;
 
     /**
@@ -38,7 +49,7 @@ public class SpotifyProcess extends WinProcess {
      *
      * @throws IllegalStateException if the Spotify process could not be found.
      */
-    public SpotifyProcess() {
+    public SpotifyProcess(SpotifyConfiguration configuration) {
         super("Spotify.exe");
 
         if (DEBUG) {
@@ -46,11 +57,55 @@ public class SpotifyProcess extends WinProcess {
         }
 
         long timeScanStart = System.currentTimeMillis();
+
+        // Find the track id address in the memory
         this.addressTrackId = this.findTrackIdAddress();
-        this.playbackAccessor = this.findPlaybackAccessor();
+
+        PlaybackAccessor accessor;
+        try {
+            // Initialize natives for Media Control access
+            this.initializeMediaControl(configuration.getNativesDirectory());
+
+            // Create accessor for playback control
+            accessor = new MediaControlPlaybackAccessor(this.mediaControl);
+        } catch (Throwable e) {
+            e.printStackTrace();
+
+            // We can continue without Media Control access but some features may not work
+            // The dumb accessor can only detect the current playing state from the process title
+            accessor = new PseudoPlaybackAccessor(this);
+        }
+        this.playbackAccessor = accessor;
 
         if (DEBUG) {
             System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
+        }
+    }
+
+    private void initializeMediaControl(Path nativesDirectory) throws IOException {
+        boolean is64Bit = System.getProperty("os.arch").contains("64");
+
+        String path = "/natives/windows-x" + (is64Bit ? 64 : 86) + "/windowsmediacontrol.dll";
+        try (InputStream nativesStream = SpotifyProcess.class.getResourceAsStream(path)) {
+            if (nativesStream == null) {
+                throw new IOException("Could not find native library: " + path);
+            }
+
+            Path nativeLibraryPath = nativesDirectory.resolve("windowsmediacontrol.dll");
+            try {
+                // Ensure the natives directory exists
+                if (!Files.exists(nativesDirectory)) {
+                    Files.createDirectories(nativesDirectory);
+                }
+
+                // Extract the native library to the specified directory
+                Files.copy(nativesStream, nativeLibraryPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new IOException("Failed to copy native library to " + nativeLibraryPath, e);
+            }
+
+            // Load the native library
+            this.mediaControl = WindowsMediaControl.loadLibrary(nativeLibraryPath);
         }
     }
 
@@ -109,46 +164,6 @@ public class SpotifyProcess extends WinProcess {
             );
         }
         return addressTrackId;
-    }
-
-    private PlaybackAccessor findPlaybackAccessor() {
-        // Find addresses of playback states when playing a playlist
-        long addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "playlist", (address, index) -> {
-            return this.hasText(address + 408, "context", "autoplay")
-                    && this.hasText(address + 128, "your_library", "home")
-                    && new MemoryPlaybackAccessor(this, address).isValid();
-        });
-
-        if (addressPlayBack == -1) {
-            // Find addresses of playback states when playing an album
-            addressPlayBack = this.findAddressOfText(0, 0x0FFFFFFF, "album", (address, index) -> {
-                return this.hasText(address + 408, "context", "autoplay")
-                        && this.hasText(address + 128, "your_library", "home")
-                        && new MemoryPlaybackAccessor(this, address).isValid();
-            });
-        }
-
-        if (addressPlayBack == -1) {
-            if (DEBUG) {
-                System.out.println("Could not find playback address in memory");
-            }
-            return new PseudoPlaybackAccessor(this);
-        }
-
-        // Create the playback accessor with the found address
-        MemoryPlaybackAccessor playbackAccessor = new MemoryPlaybackAccessor(this, addressPlayBack);
-        if (!playbackAccessor.isValid()) {
-            if (DEBUG) {
-                System.out.println("Found playback address is not valid");
-            }
-            return new PseudoPlaybackAccessor(this);
-        }
-
-        if (DEBUG) {
-            System.out.println("Found playback address at: " + Long.toHexString(addressPlayBack));
-        }
-
-        return playbackAccessor;
     }
 
     /**

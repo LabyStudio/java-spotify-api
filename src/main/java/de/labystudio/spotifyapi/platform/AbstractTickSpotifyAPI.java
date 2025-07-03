@@ -19,6 +19,8 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
+    protected static final long TICK_INTERVAL = 1000L; // 1 second
+
     /**
      * The list of all Spotify listeners.
      */
@@ -26,7 +28,7 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
     private OpenSpotifyAPI openAPI;
 
-    private SpotifyConfiguration configuration;
+    protected SpotifyConfiguration configuration;
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
@@ -55,12 +57,20 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
             }
 
             // Start task to update every second
-            this.task = this.executor.scheduleWithFixedDelay(this::onInternalTick, 0L, 1L, TimeUnit.SECONDS);
+            this.task = this.executor.scheduleWithFixedDelay(
+                    this::onInternalTick,
+                    0L,
+                    TICK_INTERVAL,
+                    TimeUnit.MILLISECONDS
+            );
+
+            // Initial tick to provide sync data (see SpotifyDirectTest)
+            this.onInternalTick();
         }
         return this;
     }
 
-    protected void onInternalTick() {
+    protected synchronized void onInternalTick() {
         try {
             // Check if we passed the exception timeout
             long timeSinceLastException = System.currentTimeMillis() - this.timeLastException;

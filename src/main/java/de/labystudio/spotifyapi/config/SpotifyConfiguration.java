@@ -1,5 +1,8 @@
 package de.labystudio.spotifyapi.config;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  * A configuration for the spotify api
  *
@@ -7,23 +10,18 @@ package de.labystudio.spotifyapi.config;
  */
 public class SpotifyConfiguration {
 
-    private long exceptionReconnectDelay;
-    private boolean autoReconnect;
+    private final long exceptionReconnectDelay;
+    private final boolean autoReconnect;
+    private final Path nativesDirectory;
 
     private SpotifyConfiguration(
             long exceptionReconnectDelay,
-            boolean autoReconnect
+            boolean autoReconnect,
+            Path nativesDirectory
     ) {
         this.exceptionReconnectDelay = exceptionReconnectDelay;
         this.autoReconnect = autoReconnect;
-    }
-
-    public void setExceptionReconnectDelay(long exceptionReconnectDelay) {
-        this.exceptionReconnectDelay = exceptionReconnectDelay;
-    }
-
-    public void setAutoReconnect(boolean autoReconnect) {
-        this.autoReconnect = autoReconnect;
+        this.nativesDirectory = nativesDirectory;
     }
 
     public long getExceptionReconnectDelay() {
@@ -34,6 +32,10 @@ public class SpotifyConfiguration {
         return this.autoReconnect;
     }
 
+    public Path getNativesDirectory() {
+        return this.nativesDirectory;
+    }
+
     /**
      * Builder to create a new spotify configuration
      */
@@ -41,6 +43,7 @@ public class SpotifyConfiguration {
 
         private long exceptionReconnectDelay = 1000 * 10L;
         private boolean autoReconnect = true;
+        private Path nativesDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "spotify-api-natives");
 
         /**
          * Set the delay between reconnects when an exception occurs
@@ -64,10 +67,23 @@ public class SpotifyConfiguration {
             return this;
         }
 
+        /**
+         * All libraries that are required to run the spotify api will be extracted to this directory.
+         *
+         * @param nativesDirectory The directory where the native libraries will be extracted to
+         *                         If null, the system temporary directory will be used.
+         * @return The builder instance
+         */
+        public Builder nativesDirectory(Path nativesDirectory) {
+            this.nativesDirectory = nativesDirectory;
+            return this;
+        }
+
         public SpotifyConfiguration build() {
             return new SpotifyConfiguration(
                     this.exceptionReconnectDelay,
-                    this.autoReconnect
+                    this.autoReconnect,
+                    this.nativesDirectory
             );
         }
     }

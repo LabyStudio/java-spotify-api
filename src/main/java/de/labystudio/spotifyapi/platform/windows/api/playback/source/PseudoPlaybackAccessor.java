@@ -1,7 +1,14 @@
-package de.labystudio.spotifyapi.platform.windows.api.playback;
+package de.labystudio.spotifyapi.platform.windows.api.playback.source;
 
+import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
 import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyProcess;
 
+/**
+ * Accessor to read the playback state from the Spotify process.
+ * It uses a pseudo method to determine if Spotify is playing based on the window title.
+ *
+ * @author LabyStudio
+ */
 public class PseudoPlaybackAccessor implements PlaybackAccessor {
 
     private final SpotifyProcess spotifyProcess;

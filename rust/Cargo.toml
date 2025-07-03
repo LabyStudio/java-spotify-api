@@ -1,0 +1,25 @@
+[package]
+name = "windowsmediacontrol"
+version = "1.0.0"
+edition = "2021"
+
+[dependencies]
+jni = "0.21.1"
+windows = { version = "0.61.3", features = ["Media_Control", "Win32_Foundation"] }
+futures = "0.3"
+lazy_static = "1.5.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "windowsmediacontrol_bin"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"
+panic = "abort"
+strip = "symbols"
+debug = false
