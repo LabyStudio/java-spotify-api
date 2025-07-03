@@ -37,7 +37,8 @@ public class SpotifyProcess extends WinProcess {
     };
 
     private final long addressTrackId;
-    private final PlaybackAccessor playbackAccessor;
+    private final PlaybackAccessor mainPlaybackAccessor;
+    private final PseudoPlaybackAccessor pseudoPlaybackAccessor;
 
     private WindowsMediaControl mediaControl;
 
@@ -61,6 +62,9 @@ public class SpotifyProcess extends WinProcess {
         // Find the track id address in the memory
         this.addressTrackId = this.findTrackIdAddress();
 
+        // The dumb accessor can only detect the current playing state from the process title
+        this.pseudoPlaybackAccessor = new PseudoPlaybackAccessor(this);
+
         PlaybackAccessor accessor;
         try {
             // Initialize natives for Media Control access
@@ -72,10 +76,9 @@ public class SpotifyProcess extends WinProcess {
             e.printStackTrace();
 
             // We can continue without Media Control access but some features may not work
-            // The dumb accessor can only detect the current playing state from the process title
-            accessor = new PseudoPlaybackAccessor(this);
+            accessor = this.pseudoPlaybackAccessor;
         }
-        this.playbackAccessor = accessor;
+        this.mainPlaybackAccessor = accessor;
 
         if (DEBUG) {
             System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
@@ -181,7 +184,7 @@ public class SpotifyProcess extends WinProcess {
      *
      * @return the track id without the prefix "spotify:track:"
      */
-    public String getTrackId() {
+    public String readTrackId() {
         return this.readTrackId(this.addressTrackId);
     }
 
@@ -210,8 +213,12 @@ public class SpotifyProcess extends WinProcess {
         return (this.previousTitle = title);
     }
 
-    public PlaybackAccessor getPlaybackAccessor() {
-        return this.playbackAccessor;
+    public PlaybackAccessor getMainPlaybackAccessor() {
+        return this.mainPlaybackAccessor;
+    }
+
+    public PseudoPlaybackAccessor getPseudoPlaybackAccessor() {
+        return this.pseudoPlaybackAccessor;
     }
 
     public long getAddressTrackId() {

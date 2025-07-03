@@ -26,7 +26,7 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
         this.playbackPosition = this.mediaControl.getPlaybackPosition();
         this.trackDuration = this.mediaControl.getTrackDuration();
         this.isPlaying = this.mediaControl.isPlaying();
-        return true;
+        return this.isValid();
     }
 
     @Override

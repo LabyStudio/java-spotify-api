@@ -42,13 +42,17 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             this.listeners.forEach(SpotifyListener::onConnect);
         }
 
-        PlaybackAccessor playback = this.process.getPlaybackAccessor();
-        String trackId = this.process.getTrackId();
+        // Read track id and check if track id is valid
+        String trackId = this.process.readTrackId();
+        if (!this.process.isTrackIdValid(trackId)) {
+            throw new IllegalStateException("Invalid track ID: " + trackId);
+        }
 
-        // Update playback status and check if it is valid
-        if (!this.process.isTrackIdValid(trackId) || !playback.update()) {
-            this.currentPosition = -1;
-            throw new IllegalStateException("Could not update playback");
+        // Update playback state
+        PlaybackAccessor playback = this.process.getMainPlaybackAccessor();
+        PlaybackAccessor pseudoPlayback = this.process.getPseudoPlaybackAccessor();
+        if (!playback.update() && pseudoPlayback.update()) {
+            playback = pseudoPlayback; // Fallback to pseudo playback if main playback fails
         }
 
         // Handle track changes
@@ -139,7 +143,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             return false;
         }
 
-        PlaybackAccessor playback = this.process.getPlaybackAccessor();
+        PlaybackAccessor playback = this.process.getMainPlaybackAccessor();
         return playback.hasTrackPosition();
     }
 
