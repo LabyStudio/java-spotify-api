@@ -18,11 +18,24 @@ public class Secret {
     }
 
     /**
+     * Converts the secret into a string representation.
+     *
+     * @return A string representation of the secret, where each character corresponds to an integer in the secret array.
+     */
+    public String getSecretAsString() {
+        StringBuilder sb = new StringBuilder();
+        for (int i : this.secret) {
+            sb.append((char) i);
+        }
+        return sb.toString();
+    }
+
+    /**
      * Converts the secret into a byte array for TOTP generation in java.
      *
      * @return A byte array representing the secret, suitable for use in TOTP generation.
      */
-    public byte[] toBytes() {
+    public byte[] getSecretAsBytes() {
         // Convert secret numbers to xor results
         StringBuilder xorResults = new StringBuilder();
         for (int i = 0; i < this.secret.length; i++) {

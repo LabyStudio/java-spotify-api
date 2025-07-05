@@ -9,6 +9,7 @@ import de.labystudio.spotifyapi.open.model.AccessTokenResponse;
 import de.labystudio.spotifyapi.open.model.track.OpenTrack;
 import de.labystudio.spotifyapi.open.totp.TOTP;
 import de.labystudio.spotifyapi.open.totp.gson.SecretDeserializer;
+import de.labystudio.spotifyapi.open.totp.gson.SecretSerializer;
 import de.labystudio.spotifyapi.open.totp.model.Secret;
 import de.labystudio.spotifyapi.open.totp.provider.SecretProvider;
 
@@ -36,6 +37,7 @@ public class OpenSpotifyAPI {
 
     public static final Gson GSON = new GsonBuilder()
             .registerTypeAdapter(Secret.class, new SecretDeserializer())
+            .registerTypeAdapter(Secret.class, new SecretSerializer())
             .create();
 
     public static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537." + (int) (Math.random() * 90);
@@ -103,7 +105,7 @@ public class OpenSpotifyAPI {
         }
 
         long serverTime = this.requestServerTime();
-        String totp = TOTP.generateOtp(secret.toBytes(), serverTime, 30, 6);
+        String totp = TOTP.generateOtp(secret.getSecretAsBytes(), serverTime, 30, 6);
 
         AccessTokenResponse response = this.getToken("transport", totp, secret.getVersion());
 
