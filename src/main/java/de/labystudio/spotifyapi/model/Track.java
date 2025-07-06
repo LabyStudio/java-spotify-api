@@ -1,5 +1,7 @@
 package de.labystudio.spotifyapi.model;
 
+import java.awt.image.BufferedImage;
+
 /**
  * A Spotify track containing the track id, name, artist and length of a song.
  *
@@ -13,11 +15,20 @@ public class Track {
 
     private final int length;
 
-    public Track(String id, String name, String artist, int length) {
+    private final BufferedImage coverArt;
+
+    public Track(
+            String id,
+            String name,
+            String artist,
+            int length,
+            BufferedImage coverArt
+    ) {
         this.id = id;
         this.name = name;
         this.artist = artist;
         this.length = length;
+        this.coverArt = coverArt;
     }
 
     public String getId() {
@@ -34,6 +45,10 @@ public class Track {
 
     public int getLength() {
         return this.length;
+    }
+
+    public BufferedImage getCoverArt() {
+        return this.coverArt;
     }
 
     @Override

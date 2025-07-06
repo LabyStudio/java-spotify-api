@@ -1,3 +1,5 @@
+package platform.windows;
+
 import com.sun.jna.Pointer;
 import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
 

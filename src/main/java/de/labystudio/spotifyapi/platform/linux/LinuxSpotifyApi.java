@@ -5,7 +5,11 @@ import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import de.labystudio.spotifyapi.platform.linux.api.MPRISCommunicator;
+import de.labystudio.spotifyapi.platform.linux.api.model.Metadata;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.net.URL;
 import java.util.Objects;
 
 /**
@@ -29,23 +33,26 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
 
     @Override
     protected void onTick() throws Exception {
-        String trackId = this.mediaPlayer.getTrackId();
+        Metadata metadata = this.mediaPlayer.readMetadata();
+        String trackId = metadata.getTrackId();
 
         // Handle on connect
-        if (!this.connected && !trackId.isEmpty()) {
+        if (!this.connected) {
             this.connected = true;
             this.listeners.forEach(SpotifyListener::onConnect);
         }
 
         // Handle track changes
-        if (!Objects.equals(trackId, this.currentTrack == null ? null : this.currentTrack.getId())) {
-            String trackName = this.mediaPlayer.getTrackName();
-            String trackArtist = this.mediaPlayer.getArtist();
-            int trackLength = this.mediaPlayer.getTrackLength();
+        String currentTrackId = this.currentTrack == null ? null : this.currentTrack.getId();
+        if (!Objects.equals(trackId, currentTrackId)) {
+            String trackName = metadata.getTrackName();
+            String trackArtist = metadata.getArtistsJoined();
+            int trackLength = metadata.getTrackLength();
+            BufferedImage coverArt = this.toBufferedImage(metadata.getArtUrl());
 
             boolean isFirstTrack = !this.hasTrack();
 
-            Track track = new Track(trackId, trackName, trackArtist, trackLength);
+            Track track = new Track(trackId, trackName, trackArtist, trackLength, coverArt);
             this.currentTrack = track;
 
             // Fire on track changed
@@ -58,7 +65,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle is playing changes
-        boolean isPlaying = this.mediaPlayer.isPlaying();
+        boolean isPlaying = this.mediaPlayer.readIsPlaying();
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -67,7 +74,7 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle position changes
-        int position = this.mediaPlayer.getPosition();
+        int position = this.mediaPlayer.readPosition();
         if (!this.hasPosition() || Math.abs(position - this.getPosition()) >= 1000) {
             this.updatePosition(position);
         }
@@ -148,6 +155,18 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
     @Override
     public boolean hasPosition() {
         return this.currentPosition != -1;
+    }
+
+    private BufferedImage toBufferedImage(String artUrl) {
+        if (artUrl == null || artUrl.isEmpty()) {
+            return null; // No cover art available
+        }
+        try {
+            return ImageIO.read(new URL(artUrl));
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return null; // Failed to load cover art
+        }
     }
 
 }

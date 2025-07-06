@@ -1,5 +1,9 @@
 package de.labystudio.spotifyapi.platform.linux.api;
 
+import de.labystudio.spotifyapi.platform.linux.api.model.InterfaceMember;
+import de.labystudio.spotifyapi.platform.linux.api.model.Parameter;
+import de.labystudio.spotifyapi.platform.linux.api.model.Variant;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 

@@ -1,5 +1,10 @@
 package de.labystudio.spotifyapi.platform.linux.api;
 
+import de.labystudio.spotifyapi.platform.linux.api.model.InterfaceMember;
+import de.labystudio.spotifyapi.platform.linux.api.model.Metadata;
+import de.labystudio.spotifyapi.platform.linux.api.model.Parameter;
+import de.labystudio.spotifyapi.platform.linux.api.model.Variant;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,42 +31,20 @@ public class MPRISCommunicator {
             "/org/mpris/MediaPlayer2"
     );
 
-    private final Map<String, Object> metadata = new HashMap<>();
-
-    private void updateMetadata() throws Exception {
-        this.metadata.clear();
-
+    public Metadata readMetadata() throws Exception {
+        Map<String, Object> metadata = new HashMap<>();
         Variant array = this.dbus.get("org.mpris.MediaPlayer2.Player", "Metadata");
         for (Variant entry : array.<Variant[]>getValue()) {
-            this.metadata.put(entry.getSig(), entry.getValue());
+            metadata.put(entry.getSig(), entry.getValue());
         }
+        return new Metadata(metadata);
     }
 
-    public String getTrackId() throws Exception {
-        this.updateMetadata();
-        return ((String) this.metadata.get("mpris:trackid")).split("/")[4];
-    }
-
-    public String getTrackName() throws Exception {
-        this.updateMetadata();
-        return this.metadata.get("xesam:title").toString();
-    }
-
-    public String getArtist() throws Exception {
-        this.updateMetadata();
-        return String.join(", ", (String[]) this.metadata.get("xesam:artist"));
-    }
-
-    public Integer getTrackLength() throws Exception {
-        this.updateMetadata();
-        return (int) ((Long) this.metadata.get("mpris:length") / 1000L) + 1;
-    }
-
-    public boolean isPlaying() throws Exception {
+    public boolean readIsPlaying() throws Exception {
         return this.dbus.get("org.mpris.MediaPlayer2.Player", "PlaybackStatus").getValue().equals("Playing");
     }
 
-    public Integer getPosition() throws Exception {
+    public Integer readPosition() throws Exception {
         return (int) ((Long) this.dbus.get("org.mpris.MediaPlayer2.Player", "Position").getValue() / 1000L);
     }
 

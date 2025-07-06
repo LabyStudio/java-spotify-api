@@ -1,8 +1,11 @@
+package platform;
+
 import de.labystudio.spotifyapi.SpotifyAPI;
 import de.labystudio.spotifyapi.SpotifyAPIFactory;
 import de.labystudio.spotifyapi.SpotifyListener;
 import de.labystudio.spotifyapi.model.Track;
 
+import java.awt.image.BufferedImage;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
@@ -20,13 +23,10 @@ public class SpotifyListenerTest {
             public void onTrackChanged(Track track) {
                 System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
 
-                // You could use the OpenSpotifyAPI to request the track cover image
-                // try {
-                //     BufferedImage imageTrackCover = openApi.requestImage(track);
-                //     System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
-                // } catch (Exception e) {
-                //     System.out.println("Could not load track cover: " + e.getMessage());
-                // }
+                if (track.getCoverArt() != null) {
+                    BufferedImage coverArt = track.getCoverArt();
+                    System.out.println("Track cover: " + coverArt.getWidth() + "x" + coverArt.getHeight());
+                }
             }
 
             @Override

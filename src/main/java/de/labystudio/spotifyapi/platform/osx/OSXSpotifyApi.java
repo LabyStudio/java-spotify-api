@@ -44,7 +44,13 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
 
             boolean isFirstTrack = !this.hasTrack();
 
-            Track track = new Track(trackId, trackName, trackArtist, trackLength);
+            Track track = new Track(
+                    trackId,
+                    trackName,
+                    trackArtist,
+                    trackLength,
+                    null // TODO: Add cover art support if possible
+            );
             this.currentTrack = track;
 
             // Fire on track changed

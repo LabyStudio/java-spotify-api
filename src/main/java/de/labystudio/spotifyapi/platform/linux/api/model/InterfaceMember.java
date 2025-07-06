@@ -1,4 +1,4 @@
-package de.labystudio.spotifyapi.platform.linux.api;
+package de.labystudio.spotifyapi.platform.linux.api.model;
 
 /**
  * Interface member wrapper for the DBusSend class.

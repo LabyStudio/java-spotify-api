@@ -1,7 +1,6 @@
 package de.labystudio.spotifyapi.open.model.track;
 
 import com.google.gson.annotations.SerializedName;
-import de.labystudio.spotifyapi.model.Track;
 
 import java.util.List;
 
@@ -82,14 +81,5 @@ public class OpenTrack {
         }
 
         return builder.substring(delimiter.length());
-    }
-
-    /**
-     * Create a new {@link Track} based on the current object.
-     *
-     * @return The new {@link Track} object
-     */
-    public Track toTrack() {
-        return new Track(this.id, this.name, this.getArtists(), this.durationMs);
     }
 }

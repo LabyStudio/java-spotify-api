@@ -1,0 +1,50 @@
+   variant       array [
+         dict entry(
+            string "mpris:trackid"
+            variant                string "/com/spotify/track/0r1kH7SIkkPP9W7mUknObF"
+         )
+         dict entry(
+            string "mpris:length"
+            variant                uint64 172000000
+         )
+         dict entry(
+            string "mpris:artUrl"
+            variant                string "https://i.scdn.co/image/ab67616d0000b27397c097afa44e5cdb38a03d4f"
+         )
+         dict entry(
+            string "xesam:album"
+            variant                string "Raop"
+         )
+         dict entry(
+            string "xesam:albumArtist"
+            variant                array [
+                  string "CRO"
+               ]
+         )
+         dict entry(
+            string "xesam:artist"
+            variant                array [
+                  string "CRO"
+               ]
+         )
+         dict entry(
+            string "xesam:autoRating"
+            variant                double 0.01
+         )
+         dict entry(
+            string "xesam:discNumber"
+            variant                int32 1
+         )
+         dict entry(
+            string "xesam:title"
+            variant                string "Easy"
+         )
+         dict entry(
+            string "xesam:trackNumber"
+            variant                int32 3
+         )
+         dict entry(
+            string "xesam:url"
+            variant                string "https://open.spotify.com/track/0r1kH7SIkkPP9W7mUknObF"
+         )
+      ]

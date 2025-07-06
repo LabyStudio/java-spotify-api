@@ -65,7 +65,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
                         trackId,
                         title.getTrackName(),
                         title.getTrackArtist(),
-                        playback.getLength()
+                        playback.getLength(),
+                        null // TODO implement covert art support in rust library
                 );
                 this.currentTrack = track;
 

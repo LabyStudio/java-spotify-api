@@ -1,4 +1,4 @@
-package de.labystudio.spotifyapi.platform.linux.api;
+package de.labystudio.spotifyapi.platform.linux.api.model;
 
 import java.util.ArrayList;
 import java.util.List;

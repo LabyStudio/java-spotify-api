@@ -58,13 +58,10 @@ localApi.registerListener(new SpotifyListener() {
     public void onTrackChanged(Track track) {
         System.out.printf("Track changed: %s (%s)\n", track, formatDuration(track.getLength()));
 
-        // You could use the OpenSpotifyAPI to request the track cover image
-        // try {
-        //     BufferedImage imageTrackCover = openApi.requestImage(track);
-        //     System.out.println("Loaded track cover: " + imageTrackCover.getWidth() + "x" + imageTrackCover.getHeight());
-        // } catch (Exception e) {
-        //     System.out.println("Could not load track cover: " + e.getMessage());
-        // }
+        if (track.getCoverArt() != null) {
+            BufferedImage coverArt = track.getCoverArt();
+            System.out.println("Track cover: " + coverArt.getWidth() + "x" + coverArt.getHeight());
+        }
     }
 
     @Override
@@ -106,20 +103,23 @@ localApi.registerListener(new SpotifyListener() {
 localApi.initialize();
 ```
 
-Fetch an image of the current playing track:
+Request information of any track id using open.spotify.com:
 ```java
 // Create a secret provider
 SecretProvider secretProvider = new DefaultSecretProvider(
         // Note: You have to update the secret with the latest TOTP secret from open.spotify.com
         // or find a way to retrieve it automatically from their website
-        Secret.fromString("meZcB\\tlUFV1D6W2Hy4@9+$QaH5)N8", 9)
+        Secret.fromString("=n:b#OuEfH\fE])e*K", 10)
 );
 
 // Create an instance of the Open Spotify API
 OpenSpotifyAPI openSpotifyAPI = new OpenSpotifyAPI(secretProvider);
 
-// Download the cover art of the current song
-BufferedImage imageTrackCover = openSpotifyAPI.requestImage(track);
+// Fetch cover art image by track id
+BufferedImage coverArt = openSpotifyAPI.requestImage(trackId);
+
+// Fetch track information by track id
+OpenTrack openTrack = openSpotifyAPI.requestOpenTrack(trackId);
 ```
 
 You can also skip the current song using the Media Key API:

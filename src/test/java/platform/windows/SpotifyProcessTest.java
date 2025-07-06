@@ -1,3 +1,5 @@
+package platform.windows;
+
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 
