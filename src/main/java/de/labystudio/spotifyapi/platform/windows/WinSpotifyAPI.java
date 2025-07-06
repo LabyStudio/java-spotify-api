@@ -5,10 +5,18 @@ import de.labystudio.spotifyapi.model.MediaKey;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.platform.AbstractTickSpotifyAPI;
 import de.labystudio.spotifyapi.platform.windows.api.WinApi;
+import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
 import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyProcess;
-import de.labystudio.spotifyapi.platform.windows.api.spotify.SpotifyTitle;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 
 /**
@@ -20,6 +28,8 @@ import java.util.Objects;
  */
 public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
+    private static WindowsMediaControl mediaControl;
+
     private SpotifyProcess process;
 
     private Track currentTrack;
@@ -30,6 +40,46 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private long lastTimePositionUpdated;
     private long prevLastReportedPosition = -1;
 
+    @Override
+    protected void onInitialized() {
+        try {
+            this.initializeMediaControl(this.configuration.getNativesDirectory());
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void initializeMediaControl(Path nativesDirectory) throws IOException {
+        if (mediaControl != null) {
+            return; // Already initialized
+        }
+
+        boolean is64Bit = System.getProperty("os.arch").contains("64");
+
+        String path = "/natives/windows-x" + (is64Bit ? 64 : 86) + "/windowsmediacontrol.dll";
+        try (InputStream nativesStream = SpotifyProcess.class.getResourceAsStream(path)) {
+            if (nativesStream == null) {
+                throw new IOException("Could not find native library: " + path);
+            }
+
+            Path nativeLibraryPath = nativesDirectory.resolve("windowsmediacontrol.dll");
+            try {
+                // Ensure the natives directory exists
+                if (!Files.exists(nativesDirectory)) {
+                    Files.createDirectories(nativesDirectory);
+                }
+
+                // Extract the native library to the specified directory
+                Files.copy(nativesStream, nativeLibraryPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new IOException("Failed to copy native library to " + nativeLibraryPath, e);
+            }
+
+            // Load the native library
+            mediaControl = WindowsMediaControl.loadLibrary(nativeLibraryPath);
+        }
+    }
+
     /**
      * Updates the current track, position and playback state.
      * If the process is not connected, it will try to connect to the Spotify process.
@@ -37,7 +87,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     protected void onTick() {
         if (!this.isConnected()) {
             // Connect
-            this.process = new SpotifyProcess(this.configuration);
+            this.process = new SpotifyProcess(mediaControl);
 
             // Fire on connect
             this.listeners.forEach(SpotifyListener::onConnect);
@@ -50,33 +100,34 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
 
         // Update playback state
-        PlaybackAccessor playback = this.process.getMainPlaybackAccessor();
-        PlaybackAccessor pseudoPlayback = this.process.getPseudoPlaybackAccessor();
-        if (!playback.update() && pseudoPlayback.update()) {
-            playback = pseudoPlayback; // Fallback to pseudo playback if main playback fails
-        }
+        PlaybackAccessor accessor = this.process.getPlaybackAccessor();
+        accessor.updatePlayback();
 
         // Handle track changes
         String currentTrackId = this.currentTrack == null ? null : this.currentTrack.getId();
         if (!Objects.equals(trackId, currentTrackId)) {
-            SpotifyTitle title = this.process.getTitle();
-            if (title != SpotifyTitle.UNKNOWN) {
-                Track track = new Track(
-                        trackId,
-                        title.getTrackName(),
-                        title.getTrackArtist(),
-                        playback.getLength(),
-                        null // TODO implement covert art support in rust library
-                );
-                this.currentTrack = track;
+            // Update track information
+            accessor.updateTrack();
 
-                // Fire on track changed
-                this.listeners.forEach(listener -> listener.onTrackChanged(track));
-            }
+            String trackTitle = accessor.getTitle();
+            String trackArtist = accessor.getArtist();
+            BufferedImage coverArt = this.toBufferedImage(accessor.getCoverArt());
+
+            Track track = new Track(
+                    trackId,
+                    trackTitle,
+                    trackArtist,
+                    accessor.getLength(),
+                    coverArt
+            );
+            this.currentTrack = track;
+
+            // Fire on track changed
+            this.listeners.forEach(listener -> listener.onTrackChanged(track));
         }
 
         // Handle is playing changes
-        boolean isPlaying = playback.isPlaying();
+        boolean isPlaying = accessor.isPlaying();
         if (isPlaying != this.isPlaying) {
             this.isPlaying = isPlaying;
 
@@ -84,10 +135,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
             this.listeners.forEach(listener -> listener.onPlayBackChanged(isPlaying));
         }
 
-        if (playback.hasTrackPosition()) {
+        if (accessor.hasTrackPosition()) {
             this.hasTrackPosition = true;
 
-            int lastReportedPosition = playback.getPosition();
+            int lastReportedPosition = accessor.getPosition();
 
             if (this.prevLastReportedPosition != lastReportedPosition) {
                 this.prevLastReportedPosition = lastReportedPosition;
@@ -194,6 +245,18 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         this.currentTrack = null;
         this.currentPosition = -1;
         this.hasTrackPosition = false;
+    }
+
+    private BufferedImage toBufferedImage(byte[] data) {
+        if (data == null || data.length == 0) {
+            return null; // No cover art available
+        }
+        try {
+            return ImageIO.read(new ByteArrayInputStream(data));
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return null; // Failed to load cover art
+        }
     }
 
 }

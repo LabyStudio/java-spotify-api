@@ -9,7 +9,7 @@ package de.labystudio.spotifyapi.platform.windows.api.spotify;
  *
  * @author LabyStudio
  */
-public class SpotifyTitle {
+public class SpotifyWindowTitle {
 
     /**
      * The delimiter used by the title to separate the track name and artist.
@@ -20,12 +20,12 @@ public class SpotifyTitle {
      * The unknown track name and artist.
      * Required if the song is paused or no track is playing.
      */
-    public static final SpotifyTitle UNKNOWN = new SpotifyTitle("Unknown", "No song playing");
+    public static final SpotifyWindowTitle UNKNOWN = new SpotifyWindowTitle("Unknown", "No song playing");
 
     private final String name;
     private final String artist;
 
-    public SpotifyTitle(String name, String artist) {
+    public SpotifyWindowTitle(String name, String artist) {
         this.name = name;
         this.artist = artist;
     }
@@ -50,12 +50,12 @@ public class SpotifyTitle {
      * @param title the title bar string
      * @return the SpotifyTitle
      */
-    public static SpotifyTitle of(String title) {
+    public static SpotifyWindowTitle of(String title) {
         if (!title.contains(DELIMITER)) {
             return null;
         }
 
         String[] split = title.split(DELIMITER);
-        return new SpotifyTitle(split[1], split[0]);
+        return new SpotifyWindowTitle(split[1], split[0]);
     }
 }

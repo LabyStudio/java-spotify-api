@@ -5,9 +5,10 @@ edition = "2021"
 
 [dependencies]
 jni = "0.21.1"
-windows = { version = "0.61.3", features = ["Media_Control", "Win32_Foundation"] }
+windows = { version = "0.61.3", features = ["Media_Control", "Win32_Foundation", "Storage_Streams"] }
 futures = "0.3"
 lazy_static = "1.5.0"
+libc = "1.0.0-alpha.1"
 
 [lib]
 crate-type = ["cdylib"]

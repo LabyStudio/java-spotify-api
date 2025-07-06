@@ -1,7 +1,10 @@
 package de.labystudio.spotifyapi.platform.windows.api.playback;
 
 public interface PlaybackAccessor {
-    boolean update();
+
+    void updatePlayback();
+
+    void updateTrack();
 
     boolean isValid();
 
@@ -10,6 +13,12 @@ public interface PlaybackAccessor {
     int getPosition();
 
     boolean isPlaying();
+
+    String getTitle();
+
+    String getArtist();
+
+    byte[] getCoverArt();
 
     default boolean hasTrackLength() {
         return this.getLength() > 0;

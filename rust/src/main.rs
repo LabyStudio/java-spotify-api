@@ -1,4 +1,5 @@
 use futures::executor::block_on;
+use windows::Storage::Streams::DataReader;
 use windows::{core::*, Media::Control::*};
 
 mod session;
@@ -40,6 +41,23 @@ fn main() -> Result<()> {
             "Track Duration: {:?}",
             timeline.EndTime()?.Duration / 10_000
         );
+
+        if let Some(media_properties) = session.TryGetMediaPropertiesAsync()?.get().ok() {
+            println!("Current Track Name: {}", media_properties.Title()?);
+            println!("Current Artist Name: {}", media_properties.Artist()?);
+
+            // Get cover art thumbnail
+            let thumbnail = media_properties.Thumbnail()?; // No Option here
+            let stream_ref = thumbnail.OpenReadAsync()?.get()?;
+            let size = stream_ref.Size()?;
+
+            let reader = DataReader::CreateDataReader(&stream_ref)?;
+            reader.LoadAsync(size as u32)?.get()?;
+            let mut buffer = vec![0u8; size as usize];
+            reader.ReadBytes(&mut buffer)?;
+
+            println!("Cover art thumbnail size: {} bytes", buffer.len());
+        }
 
         Ok(())
     })

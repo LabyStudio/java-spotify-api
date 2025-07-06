@@ -56,6 +56,8 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
                 throw new IllegalStateException("This SpotifyAPI is already initialized");
             }
 
+            this.onInitialized();
+
             // Start task to update every second
             this.task = this.executor.scheduleWithFixedDelay(
                     this::onInternalTick,
@@ -68,6 +70,10 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
             this.onInternalTick();
         }
         return this;
+    }
+
+    protected void onInitialized() {
+        // No default implementation
     }
 
     protected synchronized void onInternalTick() {

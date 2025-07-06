@@ -1,18 +1,11 @@
 package de.labystudio.spotifyapi.platform.windows.api.spotify;
 
-import de.labystudio.spotifyapi.config.SpotifyConfiguration;
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
 import de.labystudio.spotifyapi.platform.windows.api.playback.PlaybackAccessor;
+import de.labystudio.spotifyapi.platform.windows.api.playback.source.LegacyPlaybackAccessor;
 import de.labystudio.spotifyapi.platform.windows.api.playback.source.MediaControlPlaybackAccessor;
-import de.labystudio.spotifyapi.platform.windows.api.playback.source.PseudoPlaybackAccessor;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 
 /**
  * This class represents the Spotify Windows application.
@@ -37,12 +30,7 @@ public class SpotifyProcess extends WinProcess {
     };
 
     private final long addressTrackId;
-    private final PlaybackAccessor mainPlaybackAccessor;
-    private final PseudoPlaybackAccessor pseudoPlaybackAccessor;
-
-    private WindowsMediaControl mediaControl;
-
-    private SpotifyTitle previousTitle = SpotifyTitle.UNKNOWN;
+    private final PlaybackAccessor playbackAccessor;
 
     /**
      * Creates a new instance of the {@link SpotifyProcess} class.
@@ -50,7 +38,7 @@ public class SpotifyProcess extends WinProcess {
      *
      * @throws IllegalStateException if the Spotify process could not be found.
      */
-    public SpotifyProcess(SpotifyConfiguration configuration) {
+    public SpotifyProcess(WindowsMediaControl mediaControl) {
         super("Spotify.exe");
 
         if (DEBUG) {
@@ -62,54 +50,25 @@ public class SpotifyProcess extends WinProcess {
         // Find the track id address in the memory
         this.addressTrackId = this.findTrackIdAddress();
 
-        // The dumb accessor can only detect the current playing state from the process title
-        this.pseudoPlaybackAccessor = new PseudoPlaybackAccessor(this);
+        if (DEBUG) {
+            System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
+        }
 
         PlaybackAccessor accessor;
         try {
-            // Initialize natives for Media Control access
-            this.initializeMediaControl(configuration.getNativesDirectory());
+            if (mediaControl == null) {
+                throw new IllegalArgumentException("MediaControl not available");
+            }
 
             // Create accessor for playback control
-            accessor = new MediaControlPlaybackAccessor(this.mediaControl);
+            accessor = new MediaControlPlaybackAccessor(mediaControl);
         } catch (Throwable e) {
             e.printStackTrace();
 
             // We can continue without Media Control access but some features may not work
-            accessor = this.pseudoPlaybackAccessor;
+            accessor = new LegacyPlaybackAccessor(this);
         }
-        this.mainPlaybackAccessor = accessor;
-
-        if (DEBUG) {
-            System.out.println("Scanning took " + (System.currentTimeMillis() - timeScanStart) + "ms");
-        }
-    }
-
-    private void initializeMediaControl(Path nativesDirectory) throws IOException {
-        boolean is64Bit = System.getProperty("os.arch").contains("64");
-
-        String path = "/natives/windows-x" + (is64Bit ? 64 : 86) + "/windowsmediacontrol.dll";
-        try (InputStream nativesStream = SpotifyProcess.class.getResourceAsStream(path)) {
-            if (nativesStream == null) {
-                throw new IOException("Could not find native library: " + path);
-            }
-
-            Path nativeLibraryPath = nativesDirectory.resolve("windowsmediacontrol.dll");
-            try {
-                // Ensure the natives directory exists
-                if (!Files.exists(nativesDirectory)) {
-                    Files.createDirectories(nativesDirectory);
-                }
-
-                // Extract the native library to the specified directory
-                Files.copy(nativesStream, nativeLibraryPath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new IOException("Failed to copy native library to " + nativeLibraryPath, e);
-            }
-
-            // Load the native library
-            this.mediaControl = WindowsMediaControl.loadLibrary(nativeLibraryPath);
-        }
+        this.playbackAccessor = accessor;
     }
 
     private long findTrackIdAddress() {
@@ -188,41 +147,8 @@ public class SpotifyProcess extends WinProcess {
         return this.readTrackId(this.addressTrackId);
     }
 
-    /**
-     * Read the playback state from the title bar.
-     * <p>
-     * If the title bar contains the delimiter " - ", the song is playing.
-     *
-     * @return true if the song is playing, false if the song is paused
-     */
-    public boolean isPlayingUsingTitle() {
-        return this.getWindowTitle().contains(SpotifyTitle.DELIMITER);
-    }
-
-    /**
-     * Read the currently playing track name and artist from the title bar.
-     * If no song is playing it will return a cached value.
-     *
-     * @return the currently playing track name and artist
-     */
-    public SpotifyTitle getTitle() {
-        SpotifyTitle title = SpotifyTitle.of(this.getWindowTitle());
-        if (title == null) {
-            return this.previousTitle;
-        }
-        return (this.previousTitle = title);
-    }
-
-    public PlaybackAccessor getMainPlaybackAccessor() {
-        return this.mainPlaybackAccessor;
-    }
-
-    public PseudoPlaybackAccessor getPseudoPlaybackAccessor() {
-        return this.pseudoPlaybackAccessor;
-    }
-
-    public long getAddressTrackId() {
-        return this.addressTrackId;
+    public PlaybackAccessor getPlaybackAccessor() {
+        return this.playbackAccessor;
     }
 
     /**
