@@ -245,6 +245,9 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         this.currentTrack = null;
         this.currentPosition = -1;
         this.hasTrackPosition = false;
+        this.isPlaying = false;
+        this.lastTimePositionUpdated = 0;
+        this.prevLastReportedPosition = -1;
     }
 
     private BufferedImage toBufferedImage(byte[] data) {

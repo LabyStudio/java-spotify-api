@@ -86,7 +86,12 @@ public class LinuxSpotifyApi extends AbstractTickSpotifyAPI {
     @Override
     public void stop() {
         super.stop();
+
         this.connected = false;
+        this.currentTrack = null;
+        this.currentPosition = -1;
+        this.isPlaying = false;
+        this.lastTimePositionUpdated = 0;
     }
 
     private void updatePosition(int position) {
