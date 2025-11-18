@@ -40,7 +40,7 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
         }
 
         int isPlaying = this.mediaControl.isPlaying();
-        if( isPlaying < 0) {
+        if (isPlaying < 0) {
             throw new IllegalStateException("Failed to retrieve playback state");
         }
         this.isPlaying = isPlaying == 1; // Convert to boolean (1 = playing, 0 = not playing)

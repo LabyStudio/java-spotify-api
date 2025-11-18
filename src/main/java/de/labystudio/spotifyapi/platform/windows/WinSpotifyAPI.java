@@ -111,19 +111,26 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
             String trackTitle = accessor.getTitle();
             String trackArtist = accessor.getArtist();
-            BufferedImage coverArt = this.toBufferedImage(accessor.getCoverArt());
 
-            Track track = new Track(
-                    trackId,
-                    trackTitle,
-                    trackArtist,
-                    accessor.getLength(),
-                    coverArt
-            );
-            this.currentTrack = track;
+            // Check if title or artist changed (The Windows Media API is slow in updating the track information)
+            String currentTrackTitle = this.currentTrack == null ? null : this.currentTrack.getName();
+            String currentTrackArtist = this.currentTrack == null ? null : this.currentTrack.getArtist();
+            if (!Objects.equals(trackTitle, currentTrackTitle)
+                    || !Objects.equals(trackArtist, currentTrackArtist)) {
+                BufferedImage coverArt = this.toBufferedImage(accessor.getCoverArt());
 
-            // Fire on track changed
-            this.listeners.forEach(listener -> listener.onTrackChanged(track));
+                Track track = new Track(
+                        trackId,
+                        trackTitle,
+                        trackArtist,
+                        accessor.getLength(),
+                        coverArt
+                );
+                this.currentTrack = track;
+
+                // Fire on track changed
+                this.listeners.forEach(listener -> listener.onTrackChanged(track));
+            }
         }
 
         // Handle is playing changes
