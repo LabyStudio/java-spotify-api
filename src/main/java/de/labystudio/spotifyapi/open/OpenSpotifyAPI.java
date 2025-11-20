@@ -166,6 +166,10 @@ public class OpenSpotifyAPI {
      * @param callback Response with the buffered image track. It won't be called on an error.
      */
     public void requestImageAsync(String trackId, Consumer<BufferedImage> callback) {
+        if (!Track.isTrackIdValid(trackId)) {
+            throw new IllegalArgumentException("Invalid track ID: " + trackId);
+        }
+
         this.executor.execute(() -> {
             try {
                 BufferedImage image = this.requestImage(trackId);
@@ -250,6 +254,10 @@ public class OpenSpotifyAPI {
      * @throws IOException if the request failed
      */
     public BufferedImage requestImage(String trackId) throws IOException {
+        if (!Track.isTrackIdValid(trackId)) {
+            throw new IllegalArgumentException("Invalid track ID: " + trackId);
+        }
+
         // Try to get image from cache by track id
         BufferedImage cachedImage = this.imageCache.get(trackId);
         if (cachedImage != null) {

@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
  */
 public class Track {
 
+    public static final int ID_LENGTH = 22;
+
     private final String id;
     private final String name;
     private final String artist;
@@ -29,6 +31,10 @@ public class Track {
         this.artist = artist;
         this.length = length;
         this.coverArt = coverArt;
+    }
+
+    public boolean isIdValid() {
+        return isTrackIdValid(this.id);
     }
 
     public String getId() {
@@ -64,5 +70,29 @@ public class Track {
     @Override
     public String toString() {
         return String.format("[%s] %s - %s", this.id, this.name, this.artist);
+    }
+
+    /**
+     * Checks if the given track ID is valid.
+     * A track ID is valid if there are no characters with a value of zero.
+     * It also has to be exactly 22 characters long.
+     *
+     * @param trackId The track ID to check.
+     * @return True if the track ID is valid, false otherwise.
+     */
+    public static boolean isTrackIdValid(String trackId) {
+        if (trackId == null) {
+            return false;
+        }
+
+        for (char c : trackId.toCharArray()) {
+            boolean isValidCharacter = c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9';
+            if (!isValidCharacter) {
+                return false;
+            }
+        }
+        return !trackId.contains(" ") && trackId.length() == ID_LENGTH;
     }
 }

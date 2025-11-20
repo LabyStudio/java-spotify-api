@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'de.labystudio'
-version '1.4.6'
+version '1.4.7'
 
 compileJava {
     sourceCompatibility = '1.8'

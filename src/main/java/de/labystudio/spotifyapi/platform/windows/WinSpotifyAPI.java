@@ -95,7 +95,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
         // Read track id and check if track id is valid
         String trackId = this.process.readTrackId();
-        if (!this.process.isTrackIdValid(trackId)) {
+        if (!Track.isTrackIdValid(trackId)) {
             throw new IllegalStateException("Invalid track ID: " + trackId);
         }
 

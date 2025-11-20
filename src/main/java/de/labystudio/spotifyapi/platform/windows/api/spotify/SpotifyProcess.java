@@ -1,5 +1,6 @@
 package de.labystudio.spotifyapi.platform.windows.api.spotify;
 
+import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.platform.windows.api.WinProcess;
 import de.labystudio.spotifyapi.platform.windows.api.jna.Psapi;
 import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
@@ -91,7 +92,7 @@ public class SpotifyProcess extends WinProcess {
 
             // Check if the hardcoded offset is valid
             long targetAddressTrackId = chromeElfAddress + trackIdOffset;
-            if (this.isTrackIdValid(this.readTrackId(targetAddressTrackId))) {
+            if (Track.isTrackIdValid(this.readTrackId(targetAddressTrackId))) {
                 // If the offset works, exit the loop
                 addressTrackId = targetAddressTrackId;
                 break;
@@ -108,7 +109,7 @@ public class SpotifyProcess extends WinProcess {
             long scanAddressFrom = chromeElfAddress + minTrackIdOffset - threshold;
             long scanAddressTo = chromeElfAddress + maxTrackIdOffset + threshold;
             addressTrackId = this.findAddressOfText(scanAddressFrom, scanAddressTo, PREFIX_SPOTIFY_TRACK, (address, index) -> {
-                return this.isTrackIdValid(this.readTrackId(address));
+                return Track.isTrackIdValid(this.readTrackId(address));
             });
         }
 
@@ -149,24 +150,5 @@ public class SpotifyProcess extends WinProcess {
 
     public PlaybackAccessor getPlaybackAccessor() {
         return this.playbackAccessor;
-    }
-
-    /**
-     * Checks if the given track ID is valid.
-     * A track ID is valid if there are no characters with a value of zero.
-     *
-     * @param trackId The track ID to check.
-     * @return True if the track ID is valid, false otherwise.
-     */
-    public boolean isTrackIdValid(String trackId) {
-        for (char c : trackId.toCharArray()) {
-            boolean isValidCharacter = c >= 'a' && c <= 'z'
-                    || c >= 'A' && c <= 'Z'
-                    || c >= '0' && c <= '9';
-            if (!isValidCharacter) {
-                return false;
-            }
-        }
-        return true;
     }
 }

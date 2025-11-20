@@ -42,6 +42,13 @@ public class Cache<T> {
      * @param key The key of the entry
      */
     public void push(String key, T value) {
+        if (key == null) {
+            throw new IllegalArgumentException("Key cannot be null");
+        }
+        if (value == null) {
+            throw new IllegalArgumentException("Value cannot be null");
+        }
+
         // Remove entry from cache if cache is full
         if (this.cacheQueue.size() > this.cacheSize) {
             String urlToRemove = this.cacheQueue.remove(0);
