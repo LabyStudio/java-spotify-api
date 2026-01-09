@@ -6,7 +6,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonReader;
 import de.labystudio.spotifyapi.model.Track;
 import de.labystudio.spotifyapi.open.model.AccessTokenResponse;
+import de.labystudio.spotifyapi.open.model.GraphQLOperation;
+import de.labystudio.spotifyapi.open.model.track.Image;
 import de.labystudio.spotifyapi.open.model.track.OpenTrack;
+import de.labystudio.spotifyapi.open.model.track.TrackResponse;
 import de.labystudio.spotifyapi.open.totp.TOTP;
 import de.labystudio.spotifyapi.open.totp.gson.SecretDeserializer;
 import de.labystudio.spotifyapi.open.totp.gson.SecretSerializer;
@@ -16,13 +19,11 @@ import de.labystudio.spotifyapi.open.totp.provider.SecretProvider;
 import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -43,7 +44,7 @@ public class OpenSpotifyAPI {
     public static final String USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537." + (int) (Math.random() * 90);
     public static final String URL_API_GEN_ACCESS_TOKEN = "https://open.spotify.com/api/token?reason=%s&productType=web-player&totp=%s&totpServer=%s&totpVer=%s";
 
-    public static final String URL_API_TRACKS = "https://api.spotify.com/v1/tracks/%s";
+    public static final String URL_API_GRAPHQL = "https://api-partner.spotify.com/pathfinder/v1/query";
     public static final String URL_API_SERVER_TIME = "https://open.spotify.com/api/server-time";
 
     private final Executor executor = Executors.newSingleThreadExecutor();
@@ -292,12 +293,18 @@ public class OpenSpotifyAPI {
     private String requestImageUrl(String trackId) throws IOException {
         // Request track information
         OpenTrack openTrack = this.requestOpenTrack(trackId);
-        if (openTrack == null) {
+        if (openTrack == null || openTrack.album == null) {
             return null;
         }
 
-        // Get largest image url
-        return openTrack.album.images.get(0).url;
+        // Get images from album
+        List<Image> images = openTrack.album.getImages();
+        if (images == null || images.isEmpty()) {
+            return null;
+        }
+
+        // Get largest image url (images are sorted by size in descending order from API)
+        return images.get(0).url;
     }
 
     /**
@@ -324,9 +331,17 @@ public class OpenSpotifyAPI {
             return cachedOpenTrack;
         }
 
-        // Create REST API url
-        String url = String.format(URL_API_TRACKS, trackId);
-        OpenTrack openTrack = this.request(url, OpenTrack.class, true);
+        // Use GraphQL API to get track information
+        TrackResponse graphQLResponse = this.requestTrack(trackId);
+
+        // Extract OpenTrack from GraphQL response
+        OpenTrack openTrack = graphQLResponse != null && graphQLResponse.data != null
+                ? graphQLResponse.data.trackUnion
+                : null;
+
+        if (openTrack == null) {
+            return null;
+        }
 
         // Cache the open track and return it
         this.openTrackCache.push(trackId, openTrack);
@@ -334,32 +349,79 @@ public class OpenSpotifyAPI {
     }
 
     /**
-     * Request the open spotify api with the given url
+     * Request track information using GraphQL API
+     *
+     * @param trackId The track id to lookup
+     * @return GraphQL response
+     * @throws IOException if the request failed
+     */
+    private TrackResponse requestTrack(String trackId) throws IOException {
+        JsonObject variables = new JsonObject();
+        variables.addProperty("uri", "spotify:track:" + trackId);
+        return this.requestGraphQL(GraphQLOperation.GET_TRACK, variables, TrackResponse.class);
+    }
+
+    /**
+     * Request the open spotify GraphQL api with the given operation
      * It will try again once if it fails
      *
-     * @param url                       The url to request
-     * @param clazz                     The class to parse the response to
-     * @param canGenerateNewAccessToken It will try again once if it fails
-     * @param <T>                       The type of the response
+     * @param operation The GraphQL operation to execute
+     * @param variables The variables for the GraphQL query
+     * @param clazz     The class to parse the response to
+     * @param <T>       The type of the response
      * @return The parsed response
      * @throws IOException if the request failed
      */
-    public <T> T request(String url, Class<?> clazz, boolean canGenerateNewAccessToken) throws IOException {
+    public <T> T requestGraphQL(
+            GraphQLOperation operation,
+            JsonObject variables,
+            Class<T> clazz
+    ) throws IOException {
+        return this.requestGraphQL(operation, variables, clazz, true);
+    }
+
+    private <T> T requestGraphQL(
+            GraphQLOperation operation,
+            JsonObject variables,
+            Class<T> clazz,
+            boolean canGenerateNewAccessToken
+    ) throws IOException {
         // Generate access token if not present
         if (this.accessTokenResponse == null) {
             this.accessTokenResponse = this.generateAccessToken();
         }
 
+        // Build GraphQL query using JsonObject
+        JsonObject query = new JsonObject();
+        query.addProperty("operationName", operation.getOperationName());
+        query.add("variables", variables);
+
+        JsonObject extensions = new JsonObject();
+        JsonObject persistedQuery = new JsonObject();
+        persistedQuery.addProperty("version", 1);
+        persistedQuery.addProperty("sha256Hash", operation.getSha256Hash());
+        extensions.add("persistedQuery", persistedQuery);
+        query.add("extensions", extensions);
+
         // Connect
-        HttpsURLConnection connection = (HttpsURLConnection) new URL(url).openConnection();
+        HttpsURLConnection connection = (HttpsURLConnection) new URL(URL_API_GRAPHQL).openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
         connection.addRequestProperty("User-Agent", USER_AGENT);
         connection.addRequestProperty("referer", "https://open.spotify.com/");
         connection.addRequestProperty("app-platform", "WebPlayer");
         connection.addRequestProperty("origin", "https://open.spotify.com");
+        connection.addRequestProperty("content-type", "application/json");
 
         // Add access token
         if (this.accessTokenResponse != null) {
             connection.addRequestProperty("authorization", "Bearer " + this.accessTokenResponse.accessToken);
+        }
+
+        // Write the query
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = GSON.toJson(query).getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
         }
 
         // Access token outdated
@@ -370,7 +432,7 @@ public class OpenSpotifyAPI {
                 this.accessTokenResponse = this.generateAccessToken();
 
                 // Try again
-                return this.request(url, clazz, false);
+                return this.requestGraphQL(operation, variables, clazz, false);
             } else {
                 // Request failed twice
                 return null;
