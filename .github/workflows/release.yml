@@ -1,0 +1,91 @@
+name: Auto Release on Version Change
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'build.gradle'
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      version-changed: ${{ steps.check-tag.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from build.gradle
+        id: get-version
+        run: |
+          VERSION=$(grep "^version " build.gradle | sed "s/version '\(.*\)'/\1/")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          VERSION=${{ steps.get-version.outputs.version }}
+          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists"
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $VERSION does not exist - new version detected"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: check-version
+    if: needs.check-version.outputs.version-changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 16
+        uses: actions/setup-java@v3
+        with:
+          java-version: '16'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Extract release notes
+        id: release-notes
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          
+          # Get the commit message of the latest commit
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          
+          # Create release notes
+          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.check-version.outputs.version }}
+          name: ${{ needs.check-version.outputs.version }}
+          body: ${{ steps.release-notes.outputs.release_notes }}
+          draft: false
+          prerelease: false
+          files: |
+            build/libs/java-spotify-api-${{ needs.check-version.outputs.version }}.jar
+            build/libs/java-spotify-api-${{ needs.check-version.outputs.version }}-all.jar
+            build/libs/java-spotify-api-${{ needs.check-version.outputs.version }}-javadoc.jar
+            build/libs/java-spotify-api-${{ needs.check-version.outputs.version }}-sources.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
