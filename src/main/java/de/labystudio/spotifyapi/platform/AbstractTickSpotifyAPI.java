@@ -30,7 +30,11 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
     protected SpotifyConfiguration configuration;
 
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "spotify-api-tick");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private ScheduledFuture<?> task;
 
@@ -87,14 +91,15 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
             this.onTick();
         } catch (Exception e) {
             this.timeLastException = System.currentTimeMillis();
-            this.stop();
 
             // Fire on disconnect
             this.listeners.forEach(listener -> listener.onDisconnect(e));
 
-            // Restart the process
-            if (this.configuration.isAutoReconnect()) {
-                this.initialize(this.configuration);
+            // Stop ticking entirely if auto reconnect is disabled.
+            // Otherwise keep the existing task running: the exception timeout guard
+            // skips ticks until the reconnect delay passes, then onTick re-establishes the connection.
+            if (!this.configuration.isAutoReconnect()) {
+                this.stop();
             }
         }
     }

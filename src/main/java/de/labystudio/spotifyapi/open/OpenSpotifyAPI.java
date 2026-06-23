@@ -47,7 +47,11 @@ public class OpenSpotifyAPI {
     public static final String URL_API_GRAPHQL = "https://api-partner.spotify.com/pathfinder/v1/query";
     public static final String URL_API_SERVER_TIME = "https://open.spotify.com/api/server-time";
 
-    private final Executor executor = Executors.newSingleThreadExecutor();
+    private final Executor executor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "spotify-open-api");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private final Cache<BufferedImage> imageCache = new Cache<>(10);
     private final Cache<OpenTrack> openTrackCache = new Cache<>(100);
