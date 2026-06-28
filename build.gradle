@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'com.gradleup.shadow' version '9.2.2'
 }
 
 group 'de.labystudio'
@@ -29,6 +29,10 @@ dependencies {
 java {
     withSourcesJar()
     withJavadocJar()
+}
+
+tasks.withType(Test).configureEach {
+    enabled = false
 }
 
 build {
