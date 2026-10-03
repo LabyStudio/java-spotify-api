@@ -58,17 +58,34 @@ public class AppleScript {
     /**
      * Execute an AppleScript command.
      * <p>
-     * It basically calls the AppleScript application with the following command:<br>
-     * <code>osascript -e tell application "{@literal <}application{@literal >}" to {@literal <}action{@literal >}</code>
+     * It executes the following script, in-process if possible:<br>
+     * <code>tell application "{@literal <}application{@literal >}" to {@literal <}action{@literal >}</code>
+     * <p>
+     * Without in-process support it falls back to the osascript command line tool.
      *
      * @param actions The actions to execute
      * @return The result of the command
      * @throws Exception If the command failed
      */
     public String execute(Action... actions) throws Exception {
-        // Update runtime parameters
         String action = Action.toString(actions);
-        this.runtimeParameters[2] = String.format(GRAMMAR_FORMAT, this.application, action);
+        String script = String.format(GRAMMAR_FORMAT, this.application, action);
+
+        AppleScriptEngine engine = AppleScriptEngine.getInstance();
+        if (engine == null) {
+            return this.executeProcess(script, action);
+        }
+
+        try {
+            return engine.execute(script);
+        } catch (Exception e) {
+            throw new Exception("AppleScript execution \"" + action + "\" failed with " + e.getMessage(), e);
+        }
+    }
+
+    private synchronized String executeProcess(String script, String action) throws Exception {
+        // Update runtime parameters
+        this.runtimeParameters[2] = script;
 
         // Execute AppleScript process
         Process process = this.runtime.exec(this.runtimeParameters);
