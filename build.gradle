@@ -1,10 +1,11 @@
 plugins {
     id 'java'
+    id 'maven-publish'
     id 'com.gradleup.shadow' version '9.2.2'
 }
 
 group 'de.labystudio'
-version '1.5.3'
+version '1.5.4'
 
 compileJava {
     sourceCompatibility = '1.8'
@@ -29,6 +30,14 @@ dependencies {
 java {
     withSourcesJar()
     withJavadocJar()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }
 
 tasks.withType(Test).configureEach {
