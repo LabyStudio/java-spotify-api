@@ -33,12 +33,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
     private SpotifyProcess process;
 
     private Track currentTrack;
-    private int currentPosition = -1;
-    private boolean hasTrackPosition = false;
     private boolean isPlaying;
 
-    private long lastTimePositionUpdated;
     private long prevLastReportedPosition = -1;
+    private long pausedTimestamp = -1; // LastUpdatedTime seen while paused
 
     @Override
     protected void onInitialized() {
@@ -127,6 +125,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
                         coverArt
                 );
                 this.currentTrack = track;
+                this.clock.setLength(track.getLength());
+                this.clock.resync();
 
                 // Fire on track changed
                 this.listeners.forEach(listener -> listener.onTrackChanged(track));
@@ -135,7 +135,8 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
 
         // Handle is playing changes
         boolean isPlaying = accessor.isPlaying();
-        if (isPlaying != this.isPlaying) {
+        boolean playbackChanged = isPlaying != this.isPlaying;
+        if (playbackChanged) {
             this.isPlaying = isPlaying;
 
             // Fire on play back changed
@@ -143,31 +144,26 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
 
         if (accessor.hasTrackPosition()) {
-            this.hasTrackPosition = true;
-
+            long now = this.clock.now();
             int lastReportedPosition = accessor.getPosition();
+            long reportedAt = accessor.getPositionTimestamp();
 
-            if (this.prevLastReportedPosition != lastReportedPosition) {
-                this.prevLastReportedPosition = lastReportedPosition;
-
-                // Get the daemon position (Last reported position + relative time)
-                int expectedPosition = this.getPosition();
-
-                // Compare if the expected position based on time and the last reported position are close enough
-                boolean seeked = Math.abs(lastReportedPosition - expectedPosition) > TICK_INTERVAL;
-
-                this.currentPosition = lastReportedPosition;
-                this.lastTimePositionUpdated = System.currentTimeMillis();
-
-                // Fire on position changed
-                if (seeked) {
-                    this.listeners.forEach(listener -> listener.onPositionChanged(this.currentPosition));
-                }
+            // GSMTC Position is only pushed on pause/seek/track change, LastUpdatedTime says when
+            // a resume might not push one (idk) -> the timestamp from the pause would count the paused time
+            if (reportedAt > 0 && reportedAt != this.pausedTimestamp) {
+                long age = System.currentTimeMillis() - reportedAt;
+                long position = isPlaying && age > 0 ? lastReportedPosition + age : lastReportedPosition;
+                this.updatePosition(position, now, isPlaying);
+            } else if (playbackChanged
+                    || this.prevLastReportedPosition != lastReportedPosition
+                    || !this.clock.hasPosition()) {
+                // no usable LastUpdatedTime (old dll or resumed) -> the change is only seen at tick time
+                this.updatePosition(lastReportedPosition, now, isPlaying);
             }
+            this.prevLastReportedPosition = lastReportedPosition;
+            this.pausedTimestamp = isPlaying ? this.pausedTimestamp : reportedAt;
         } else {
-            this.currentPosition = -1;
-            this.hasTrackPosition = false;
-            this.lastTimePositionUpdated = System.currentTimeMillis();
+            this.clock.reset();
         }
 
         // Fire keep alive
@@ -184,20 +180,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (!this.hasPosition()) {
             throw new IllegalStateException("Position is not known yet. Pause the song for a second and try again.");
         }
-
-        if (this.isPlaying) {
-            // Interpolate position
-            long timePassed = System.currentTimeMillis() - this.lastTimePositionUpdated;
-            long interpolatedPosition = this.currentPosition + timePassed;
-
-            if (this.hasTrack()) {
-                return (int) Math.min(interpolatedPosition, this.currentTrack.getLength());
-            } else {
-                return (int) interpolatedPosition;
-            }
-        } else {
-            return this.currentPosition;
-        }
+        return (int) this.clock.getPosition();
     }
 
     @Override
@@ -205,7 +188,7 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         if (!this.isConnected()) {
             return false;
         }
-        return this.hasTrackPosition;
+        return this.clock.hasPosition();
     }
 
     @Override
@@ -250,11 +233,10 @@ public class WinSpotifyAPI extends AbstractTickSpotifyAPI {
         }
 
         this.currentTrack = null;
-        this.currentPosition = -1;
-        this.hasTrackPosition = false;
         this.isPlaying = false;
-        this.lastTimePositionUpdated = 0;
         this.prevLastReportedPosition = -1;
+        this.pausedTimestamp = -1;
+        this.clock.reset();
     }
 
     private BufferedImage toBufferedImage(byte[] data) {

@@ -12,6 +12,16 @@ public interface PlaybackAccessor {
 
     int getPosition();
 
+    /**
+     * Returns the time the position was reported at, as unix epoch milliseconds.
+     * Returns -1 if the source has no timestamp for the position.
+     *
+     * @return the time the position was reported at or -1
+     */
+    default long getPositionTimestamp() {
+        return -1;
+    }
+
     boolean isPlaying();
 
     String getTitle();

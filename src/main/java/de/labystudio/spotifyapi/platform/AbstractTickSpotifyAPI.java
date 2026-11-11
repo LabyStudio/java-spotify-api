@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
-    protected static final long TICK_INTERVAL = 1000L; // 1 second
+    protected static final long TICK_INTERVAL = 1000L; // default, see SpotifyConfiguration#getTickInterval
 
     /**
      * The list of all Spotify listeners.
@@ -29,6 +29,8 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
     private OpenSpotifyAPI openAPI;
 
     protected SpotifyConfiguration configuration;
+
+    protected final PlaybackClock clock = new PlaybackClock();
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "spotify-api-tick");
@@ -42,7 +44,7 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
     /**
      * Initialize the SpotifyAPI abstract tick implementation.
-     * It will create a task that will update the current track and position every second.
+     * It will create a task that will update the current track and position every tick interval.
      *
      * @return the initialized SpotifyAPI
      * @throws IllegalStateException if the API is already initialized or has been shutdown
@@ -62,11 +64,10 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
 
             this.onInitialized();
 
-            // Start task to update every second
             this.task = this.executor.scheduleWithFixedDelay(
                     this::onInternalTick,
                     0L,
-                    TICK_INTERVAL,
+                    configuration.getTickInterval(),
                     TimeUnit.MILLISECONDS
             );
 
@@ -105,6 +106,20 @@ public abstract class AbstractTickSpotifyAPI implements SpotifyAPI {
     }
 
     protected abstract void onTick() throws Exception;
+
+    /**
+     * Feed a measured position into the playback clock and fire {@link SpotifyListener#onPositionChanged(int)} on a seek.
+     *
+     * @param position       the measured position in milliseconds
+     * @param sampledAtNanos the {@link PlaybackClock#now()} value the measurement belongs to
+     * @param playing        true if the track was playing at that time
+     */
+    protected void updatePosition(long position, long sampledAtNanos, boolean playing) {
+        if (this.clock.update(position, sampledAtNanos, playing)) {
+            int current = (int) this.clock.getPosition();
+            this.listeners.forEach(listener -> listener.onPositionChanged(current));
+        }
+    }
 
     @Override
     public void registerListener(SpotifyListener listener) {

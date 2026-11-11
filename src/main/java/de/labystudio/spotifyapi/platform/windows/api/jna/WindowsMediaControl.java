@@ -3,6 +3,7 @@ package de.labystudio.spotifyapi.platform.windows.api.jna;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.NativeLongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
@@ -13,6 +14,8 @@ public interface WindowsMediaControl extends Library {
     boolean isSpotifyAvailable();
 
     long getPlaybackPosition();
+
+    boolean getPlaybackTimeline(LongByReference outPositionMs, LongByReference outUpdatedUnixMs);
 
     long getTrackDuration();
 

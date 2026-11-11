@@ -1,6 +1,7 @@
 package de.labystudio.spotifyapi.platform.windows.api.playback.source;
 
 import com.sun.jna.Pointer;
+import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.NativeLongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import de.labystudio.spotifyapi.platform.windows.api.jna.WindowsMediaControl;
@@ -17,6 +18,8 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
     private final WindowsMediaControl mediaControl;
 
     private long playbackPosition;
+    private long positionTimestamp = -1;
+    private boolean hasTimeline = true; // false once an older dll without getPlaybackTimeline is loaded
     private long trackDuration;
     private boolean isPlaying;
 
@@ -34,7 +37,7 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
 
     @Override
     public void updatePlayback() {
-        this.playbackPosition = this.mediaControl.getPlaybackPosition();
+        this.readPosition();
         if (this.playbackPosition == -1) {
             throw new IllegalStateException("Playback information unavailable");
         }
@@ -44,6 +47,27 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
             throw new IllegalStateException("Failed to retrieve playback state");
         }
         this.isPlaying = isPlaying == 1; // Convert to boolean (1 = playing, 0 = not playing)
+    }
+
+    private void readPosition() {
+        if (this.hasTimeline) {
+            LongByReference position = new LongByReference();
+            LongByReference updated = new LongByReference();
+            try {
+                if (this.mediaControl.getPlaybackTimeline(position, updated)) {
+                    this.playbackPosition = position.getValue();
+                    this.positionTimestamp = updated.getValue();
+                } else {
+                    this.playbackPosition = -1;
+                    this.positionTimestamp = -1;
+                }
+                return;
+            } catch (UnsatisfiedLinkError e) {
+                this.hasTimeline = false;
+            }
+        }
+        this.playbackPosition = this.mediaControl.getPlaybackPosition();
+        this.positionTimestamp = -1;
     }
 
     @Override
@@ -98,6 +122,11 @@ public class MediaControlPlaybackAccessor implements PlaybackAccessor {
     @Override
     public int getPosition() {
         return (int) this.playbackPosition;
+    }
+
+    @Override
+    public long getPositionTimestamp() {
+        return this.positionTimestamp;
     }
 
     @Override
