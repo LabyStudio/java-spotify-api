@@ -21,10 +21,7 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
     private boolean connected = false;
 
     private Track currentTrack;
-    private int currentPosition = -1;
     private boolean isPlaying;
-
-    private long lastTimePositionUpdated;
 
     @Override
     protected void onTick() throws Exception {
@@ -42,8 +39,6 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
             String trackArtist = this.appleScript.getTrackArtist();
             int trackLength = this.appleScript.getTrackLength();
 
-            boolean isFirstTrack = !this.hasTrack();
-
             Track track = new Track(
                     trackId,
                     trackName,
@@ -52,14 +47,10 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
                     null // TODO: Add cover art support if possible
             );
             this.currentTrack = track;
+            this.clock.resync();
 
             // Fire on track changed
             this.listeners.forEach(listener -> listener.onTrackChanged(track));
-
-            // Reset position on song change
-            if (!isFirstTrack) {
-                this.updatePosition(0);
-            }
         }
 
         // Handle is playing changes
@@ -72,10 +63,10 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
         }
 
         // Handle position changes
+        long before = this.clock.now();
         int position = this.appleScript.getPlayerPosition();
-        if (!this.hasPosition() || Math.abs(position - this.getPosition()) > 1000) {
-            this.updatePosition(position);
-        }
+        long after = this.clock.now();
+        this.updatePosition(position, before + (after - before) / 2, isPlaying); // half the round trip
 
         // Fire keep alive
         this.listeners.forEach(SpotifyListener::onSync);
@@ -87,22 +78,8 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
 
         this.connected = false;
         this.currentTrack = null;
-        this.currentPosition = -1;
         this.isPlaying = false;
-        this.lastTimePositionUpdated = 0;
-    }
-
-    private void updatePosition(int position) {
-        if (position == this.currentPosition) {
-            return;
-        }
-
-        // Update position known state
-        this.currentPosition = position;
-        this.lastTimePositionUpdated = System.currentTimeMillis();
-
-        // Fire on position changed
-        this.listeners.forEach(listener -> listener.onPositionChanged(position));
+        this.clock.reset();
     }
 
     @Override
@@ -130,14 +107,7 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
         if (!this.hasPosition()) {
             throw new IllegalStateException("Position is not known yet");
         }
-
-        if (this.isPlaying) {
-            // Interpolate position
-            long timePassed = System.currentTimeMillis() - this.lastTimePositionUpdated;
-            return this.currentPosition + (int) timePassed;
-        } else {
-            return this.currentPosition;
-        }
+        return (int) this.clock.getPosition();
     }
 
     @Override
@@ -157,7 +127,7 @@ public class OSXSpotifyApi extends AbstractTickSpotifyAPI {
 
     @Override
     public boolean hasPosition() {
-        return this.currentPosition != -1;
+        return this.clock.hasPosition();
     }
 
 }
