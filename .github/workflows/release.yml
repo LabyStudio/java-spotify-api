@@ -92,25 +92,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build -PwindowsNativeDll=native-artifacts/windowsmediacontrol.dll
 
-      - name: Extract release notes
-        id: release-notes
-        run: |
-          VERSION=${{ needs.check-version.outputs.version }}
-          
-          # Get the commit message of the latest commit
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          
-          # Create release notes
-          echo "release_notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMIT_MSG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-version.outputs.version }}
           name: ${{ needs.check-version.outputs.version }}
-          body: ${{ steps.release-notes.outputs.release_notes }}
+          generate_release_notes: true
           draft: false
           prerelease: false
           files: |
