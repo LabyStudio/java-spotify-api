@@ -50,6 +50,48 @@ pub extern "system" fn getPlaybackPosition(_env: JNIEnv, _class: JClass) -> jlon
     }
 }
 
+const FILETIME_UNIX_EPOCH: i64 = 116_444_736_000_000_000; // 1970-01-01 in 100ns ticks since 1601-01-01
+
+// one TimelineProperties snapshot -> Position and LastUpdatedTime cannot tear
+// Spotify only pushes the timeline on pause/seek/track change -> java adds now - LastUpdatedTime while playing
+// out_updated_unix_ms is -1 when LastUpdatedTime is not set
+#[no_mangle]
+pub extern "system" fn getPlaybackTimeline(
+    out_position_ms: *mut i64,
+    out_updated_unix_ms: *mut i64,
+) -> i32 {
+    if out_position_ms.is_null() || out_updated_unix_ms.is_null() {
+        return 0; // false
+    }
+    let result = std::panic::catch_unwind(|| {
+        block_on(async {
+            match get_spotify_session()? {
+                Some(session) => {
+                    let timeline = session.GetTimelineProperties()?;
+                    let position = timeline.Position()?.Duration / 10_000;
+                    let updated = timeline.LastUpdatedTime()?.UniversalTime; // FILETIME ticks, UTC
+                    let updated_unix_ms = if updated > FILETIME_UNIX_EPOCH {
+                        (updated - FILETIME_UNIX_EPOCH) / 10_000
+                    } else {
+                        -1
+                    };
+                    Ok((position, updated_unix_ms))
+                }
+                _ => Err(Error::new(E_FAIL, "Spotify session not found")),
+            }
+        })
+    });
+
+    match result {
+        Ok(Ok((position, updated_unix_ms))) => unsafe {
+            *out_position_ms = position;
+            *out_updated_unix_ms = updated_unix_ms;
+            1 // true
+        },
+        _ => 0, // false
+    }
+}
+
 #[no_mangle]
 pub extern "system" fn getTrackDuration(_env: JNIEnv, _class: JClass) -> jlong {
     let result = std::panic::catch_unwind(|| {
