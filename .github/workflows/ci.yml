@@ -8,21 +8,27 @@ on:
 
 jobs:
   native-windows:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v6
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0
+        uses: dtolnay/rust-toolchain@599c45df1a24c1c63ae1129a7e59f46654b8fb66 # 1.89.0
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Install Windows cross-compiler
+        run: cargo install cargo-xwin --version 0.23.1 --locked
       - name: Build Windows native library
-        run: cargo build --manifest-path rust/Cargo.toml --release --lib --locked
+        run: cargo xwin build --manifest-path rust/Cargo.toml --release --lib --locked --target x86_64-pc-windows-msvc
+        env:
+          XWIN_ACCEPT_LICENSE: '1'
       - name: Upload Windows native library
         uses: actions/upload-artifact@v6
         with:
           name: windowsmediacontrol
-          path: rust/target/release/windowsmediacontrol.dll
+          path: rust/target/x86_64-pc-windows-msvc/release/windowsmediacontrol.dll
           if-no-files-found: error
 
   build:
@@ -38,7 +44,7 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: windowsmediacontrol
-          path: src/main/resources/natives/windows-x64
+          path: native-artifacts
       - name: Set up JDK 26
         uses: actions/setup-java@v6
         with:
@@ -47,7 +53,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build -PwindowsNativeDll=native-artifacts/windowsmediacontrol.dll
       - name: Upload jar
         uses: actions/upload-artifact@v6
         with:

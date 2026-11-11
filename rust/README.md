@@ -1,8 +1,7 @@
 # Windows native library
 
-`windowsmediacontrol.dll` is built from this crate. CI and release builds compile it on a
-Windows runner and replace the fallback copy in `src/main/resources/natives/windows-x64`
-before Gradle packages the JAR.
+`windowsmediacontrol.dll` is built from this crate. The DLL is generated during CI, release,
+and JitPack builds; it is not stored in Git.
 
 To build the library locally on Windows:
 
@@ -12,6 +11,13 @@ cargo build --manifest-path rust/Cargo.toml --release --lib --locked
 
 The output is `rust/target/release/windowsmediacontrol.dll`.
 
-The fallback DLL remains in the repository for JitPack and local Java-only builds, which do
-not run the native toolchain. Published GitHub release artifacts must always use the DLL
-produced by the release workflow from the same commit.
+Pass the result to Gradle when packaging locally:
+
+```shell
+./gradlew build -PwindowsNativeDll=rust/target/release/windowsmediacontrol.dll
+```
+
+Linux/JitPack builds use pinned `cargo-xwin` and place the cross-compiled DLL under
+`rust/target/x86_64-pc-windows-msvc/release` instead. Gradle copies the supplied DLL into a
+generated resource directory before packaging it, so source-controlled resources never
+contain a native binary.

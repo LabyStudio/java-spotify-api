@@ -1,2 +1,9 @@
 jdk:
   - openjdk17
+before_install:
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.89.0 --profile minimal
+  - $HOME/.cargo/bin/rustup target add x86_64-pc-windows-msvc
+  - $HOME/.cargo/bin/cargo install cargo-xwin --version 0.23.1 --locked
+  - XWIN_ACCEPT_LICENSE=1 $HOME/.cargo/bin/cargo xwin build --manifest-path rust/Cargo.toml --release --lib --locked --target x86_64-pc-windows-msvc
+install:
+  - ./gradlew build publishToMavenLocal -PwindowsNativeDll=rust/target/x86_64-pc-windows-msvc/release/windowsmediacontrol.dll
